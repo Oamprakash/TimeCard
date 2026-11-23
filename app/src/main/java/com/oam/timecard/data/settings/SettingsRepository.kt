@@ -5,14 +5,19 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.oam.timecard.ads.InterstitialHistory
+import com.oam.timecard.domain.engine.AlertType
 import com.oam.timecard.domain.engine.PayPeriodConfig
 import com.oam.timecard.domain.engine.PayPeriodType
+import com.oam.timecard.domain.engine.ReminderSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.DayOfWeek
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.WeekFields
@@ -32,7 +37,16 @@ data class AppSettings(
     val removeAds: Boolean,
     /** Job preselected on the Clock tab when not clocked in. */
     val selectedJobId: Long?,
-)
+    /** "Still clocked in?" after this many hours; null = off. */
+    val stillClockedInHours: Int?,
+    /** Break / max-hours warnings from the job's rules (Germany preset). */
+    val ruleWarnings: Boolean,
+) {
+    val reminders: ReminderSettings
+        get() = ReminderSettings(stillClockedInHours?.let { Duration.ofHours(it.toLong()) }, ruleWarnings)
+}
+
+const val DEFAULT_STILL_CLOCKED_IN_HOURS = 10
 
 @Singleton
 class SettingsRepository @Inject constructor(@ApplicationContext private val context: Context) {
@@ -47,6 +61,9 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val INTERSTITIAL_DAY = longPreferencesKey("interstitial_day")
         val INTERSTITIAL_COUNT = longPreferencesKey("interstitial_count")
         val INTERSTITIAL_LAST = longPreferencesKey("interstitial_last_ms")
+        val STILL_CLOCKED_IN_HOURS = intPreferencesKey("still_clocked_in_hours") // 0 = off
+        val RULE_WARNINGS = booleanPreferencesKey("rule_warnings")
+        val SENT_ALERTS = stringSetPreferencesKey("sent_alerts") // "shiftId:TYPE"
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -62,6 +79,8 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
             ),
             removeAds = p[Keys.REMOVE_ADS] ?: false,
             selectedJobId = p[Keys.SELECTED_JOB],
+            stillClockedInHours = (p[Keys.STILL_CLOCKED_IN_HOURS] ?: DEFAULT_STILL_CLOCKED_IN_HOURS).takeIf { it > 0 },
+            ruleWarnings = p[Keys.RULE_WARNINGS] ?: true,
         )
     }
 
@@ -88,5 +107,26 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     }
 
     suspend fun setSelectedJob(jobId: Long) = context.dataStore.edit { it[Keys.SELECTED_JOB] = jobId }
+    suspend fun clearSelectedJob() = context.dataStore.edit { it.remove(Keys.SELECTED_JOB) }
+
+    /** [hours] null or 0 turns the "still clocked in?" reminder off. */
+    suspend fun setReminders(hours: Int?, ruleWarnings: Boolean) = context.dataStore.edit {
+        it[Keys.STILL_CLOCKED_IN_HOURS] = hours ?: 0
+        it[Keys.RULE_WARNINGS] = ruleWarnings
+    }
+
+    suspend fun sentAlerts(shiftId: Long): Set<AlertType> =
+        context.dataStore.data.first()[Keys.SENT_ALERTS].orEmpty()
+            .mapNotNull { e -> e.split(':').takeIf { it.size == 2 && it[0] == shiftId.toString() }?.get(1) }
+            .mapNotNull { runCatching { AlertType.valueOf(it) }.getOrNull() }
+            .toSet()
+
+    /** Records alerts sent for [shiftId] and forgets those of older shifts. */
+    suspend fun addSentAlerts(shiftId: Long, alerts: Collection<AlertType>) = context.dataStore.edit { p ->
+        val keep = p[Keys.SENT_ALERTS].orEmpty().filter { it.startsWith("$shiftId:") }
+        p[Keys.SENT_ALERTS] = (keep + alerts.map { "$shiftId:${it.name}" }).toSet()
+    }
+
+    suspend fun clearSentAlerts() = context.dataStore.edit { it.remove(Keys.SENT_ALERTS) }
     suspend fun setRemoveAds(owned: Boolean) = context.dataStore.edit { it[Keys.REMOVE_ADS] = owned }
 }

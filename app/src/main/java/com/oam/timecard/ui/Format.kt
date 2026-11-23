@@ -53,3 +53,9 @@ fun android.content.Context.findActivity(): android.app.Activity? {
     }
     return null
 }
+
+/** Non-Compose version of [formatHm] for notifications and the widget. */
+fun formatHmText(context: android.content.Context, d: Duration): String {
+    val p = DurationParts.of(d)
+    return context.getString(R.string.hours_minutes, p.hours, p.minutes)
+}

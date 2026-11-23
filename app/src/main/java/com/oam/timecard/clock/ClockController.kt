@@ -1,8 +1,11 @@
 package com.oam.timecard.clock
 
+import android.content.Context
 import com.oam.timecard.data.db.toDomain
 import com.oam.timecard.data.repository.TimeCardRepository
 import com.oam.timecard.domain.engine.RunningState
+import com.oam.timecard.widget.TimeCardWidget
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,8 +18,10 @@ import kotlinx.coroutines.sync.withLock
  */
 @Singleton
 class ClockController @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repo: TimeCardRepository,
     private val notifier: ClockNotifier,
+    private val reminders: Reminders,
     private val clock: Clock,
 ) {
     // Serialises taps from the UI and the notification arriving at the same moment.
@@ -30,24 +35,30 @@ class ClockController @Inject constructor(
 
     suspend fun clockOut() = lock.withLock {
         repo.clockOut()
-        notifier.cancel()
+        syncLocked()
     }
 
     suspend fun startBreak() = lock.withLock { repo.startBreak(); syncLocked() }
 
     suspend fun endBreak() = lock.withLock { repo.endBreak(); syncLocked() }
 
-    /** Re-posts or removes the notification from what is stored. Safe to call any time (app start, boot, time change). */
+    /**
+     * Brings the notification, reminders and home-screen widget in line with what is stored.
+     * Safe to call any time (app start, boot, time change, after edits or a backup import).
+     */
     suspend fun sync() = lock.withLock { syncLocked() }
 
     private suspend fun syncLocked() {
         val running = repo.running()
         if (running == null) {
             notifier.cancel()
-            return
+            reminders.stop()
+        } else {
+            val now = clock.instant()
+            val jobName = repo.jobWithRules(running.shift.jobId)?.job?.name.orEmpty()
+            notifier.show(RunningState.snapshot(running.toDomain(), now), jobName, now)
+            reminders.check()
         }
-        val now = clock.instant()
-        val jobName = repo.jobWithRules(running.shift.jobId)?.job?.name.orEmpty()
-        notifier.show(RunningState.snapshot(running.toDomain(), now), jobName, now)
+        runCatching { TimeCardWidget.refresh(context) }
     }
 }

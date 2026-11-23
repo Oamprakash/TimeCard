@@ -16,6 +16,9 @@ interface RuleSetDao {
     @Insert suspend fun insert(rules: RuleSetEntity): Long
     @Update suspend fun update(rules: RuleSetEntity)
     @Query("SELECT * FROM rule_sets WHERE id = :id") suspend fun get(id: Long): RuleSetEntity?
+    @Query("SELECT * FROM rule_sets") suspend fun getAll(): List<RuleSetEntity>
+    @Insert suspend fun insertAll(rows: List<RuleSetEntity>)
+    @Query("DELETE FROM rule_sets") suspend fun deleteAll()
 }
 
 @Dao
@@ -33,6 +36,14 @@ interface JobDao {
 
     @Query("SELECT COUNT(*) FROM jobs WHERE archived = 0")
     suspend fun activeCount(): Int
+
+    @Transaction
+    @Query("SELECT * FROM jobs ORDER BY archived, sortOrder, id")
+    fun observeAll(): Flow<List<JobWithRules>>
+
+    @Query("SELECT * FROM jobs") suspend fun getAll(): List<JobEntity>
+    @Insert suspend fun insertAll(rows: List<JobEntity>)
+    @Query("DELETE FROM jobs") suspend fun deleteAll()
 }
 
 @Dao
@@ -78,6 +89,13 @@ interface ShiftDao {
     @Query("SELECT * FROM shifts WHERE jobId = :jobId AND workDate BETWEEN :from AND :to ORDER BY startUtc")
     suspend fun getRangeForJob(jobId: Long, from: LocalDate, to: LocalDate): List<ShiftWithBreaks>
 
+    @Query("SELECT * FROM shifts") suspend fun getAllShifts(): List<ShiftEntity>
+    @Query("SELECT * FROM breaks") suspend fun getAllBreaks(): List<BreakEntity>
+    @Insert suspend fun insertAllShifts(rows: List<ShiftEntity>)
+    @Insert suspend fun insertAllBreaks(rows: List<BreakEntity>)
+    @Query("DELETE FROM shifts") suspend fun deleteAllShifts()
+    @Query("DELETE FROM breaks") suspend fun deleteAllBreaks()
+
     /** Overlap check for manual entries (end null = running, treated as open-ended). */
     @Query(
         """SELECT COUNT(*) FROM shifts
@@ -99,4 +117,8 @@ interface DayMarkDao {
 
     @Query("SELECT * FROM day_marks WHERE jobId = :jobId AND date BETWEEN :from AND :to")
     suspend fun getRangeForJob(jobId: Long, from: LocalDate, to: LocalDate): List<DayMarkEntity>
+
+    @Query("SELECT * FROM day_marks") suspend fun getAll(): List<DayMarkEntity>
+    @Insert suspend fun insertAll(rows: List<DayMarkEntity>)
+    @Query("DELETE FROM day_marks") suspend fun deleteAll()
 }

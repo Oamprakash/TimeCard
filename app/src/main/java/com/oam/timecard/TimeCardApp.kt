@@ -7,6 +7,7 @@ import com.oam.timecard.ads.RewardedManager
 import com.oam.timecard.billing.BillingManager
 import com.oam.timecard.clock.ClockController
 import com.oam.timecard.clock.ClockNotifier
+import com.oam.timecard.clock.Reminders
 import com.oam.timecard.di.ApplicationScope
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class TimeCardApp : Application() {
     @Inject lateinit var notifier: ClockNotifier
     @Inject lateinit var clockController: ClockController
+    @Inject lateinit var reminders: Reminders
     @Inject lateinit var billing: BillingManager
     @Inject lateinit var adsGate: AdsGate
     @Inject lateinit var interstitial: InterstitialManager
@@ -27,6 +29,7 @@ class TimeCardApp : Application() {
     override fun onCreate() {
         super.onCreate()
         notifier.createChannel()
+        reminders.createChannel()
         // Puts the ongoing notification back if it was swiped away or the process was killed.
         appScope.launch { clockController.sync() }
         // Restores "Remove ads" (and notices refunds) on every start.

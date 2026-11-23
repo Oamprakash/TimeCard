@@ -5,6 +5,7 @@ import com.oam.timecard.data.db.BreakEntity
 import com.oam.timecard.data.db.DayMarkEntity
 import com.oam.timecard.data.db.JobEntity
 import com.oam.timecard.data.db.JobWithRules
+import com.oam.timecard.data.db.RuleSetEntity
 import com.oam.timecard.data.db.ShiftEntity
 import com.oam.timecard.data.db.ShiftWithBreaks
 import com.oam.timecard.data.db.TimeCardDatabase
@@ -55,6 +56,8 @@ class TimeCardRepository @Inject constructor(
     private val marks = db.dayMarkDao()
 
     val activeJobs: Flow<List<JobWithRules>> = jobs.observeActive()
+    /** Including archived jobs (Settings). */
+    val allJobs: Flow<List<JobWithRules>> = jobs.observeAll()
     val runningShift: Flow<ShiftWithBreaks?> = shifts.observeRunning()
 
     suspend fun addJob(
@@ -126,6 +129,24 @@ class TimeCardRepository @Inject constructor(
     }
 
     suspend fun running(): ShiftWithBreaks? = shifts.getRunning()
+
+    /** Saves a job and its own rules row together. */
+    suspend fun updateJob(job: JobEntity, rules: RuleSetEntity) = db.withTransaction {
+        require(job.ruleSetId == rules.id) { "Rules belong to another job" }
+        this.rules.update(rules)
+        jobs.update(job)
+    }
+
+    /**
+     * Archived jobs disappear from the Clock tab and new entries but keep all their history.
+     * @return false if the job is clocked in right now (clock out first).
+     */
+    suspend fun setArchived(jobId: Long, archived: Boolean): Boolean = db.withTransaction {
+        if (archived && shifts.getRunning()?.shift?.jobId == jobId) return@withTransaction false
+        val job = jobs.getWithRules(jobId)?.job ?: return@withTransaction false
+        jobs.update(job.copy(archived = archived))
+        true
+    }
 
     suspend fun jobWithRules(jobId: Long): JobWithRules? = jobs.getWithRules(jobId)
 

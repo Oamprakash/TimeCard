@@ -23,10 +23,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.oam.timecard.R
 import com.oam.timecard.ui.clock.ClockScreen
+import com.oam.timecard.ui.job.JobEditScreen
+import com.oam.timecard.ui.job.JobEditViewModel
+import com.oam.timecard.ui.onboarding.OnboardingScreen
 import com.oam.timecard.ui.reports.ReportsScreen
 import com.oam.timecard.ui.shift.ShiftEditScreen
 import com.oam.timecard.ui.shift.ShiftEditViewModel
@@ -42,10 +47,23 @@ private enum class Tab(val route: String, @StringRes val label: Int, val icon: I
 }
 
 private const val SHIFT_ROUTE = "shift"
+private const val JOB_ROUTE = "job"
 
 @Composable
-fun TimeCardRoot() {
+fun TimeCardRoot(rootViewModel: RootViewModel = hiltViewModel()) {
+    val root by rootViewModel.state.collectAsStateWithLifecycle()
     MaterialTheme {
+        when (root) {
+            RootState.LOADING -> Unit // first frame only; the clock state shows within the 1 s budget
+            RootState.ONBOARDING -> OnboardingScreen()
+            RootState.MAIN -> MainTabs()
+        }
+    }
+}
+
+@Composable
+private fun MainTabs() {
+    run {
         val nav = rememberNavController()
         val backStack by nav.currentBackStackEntryAsState()
         val current = backStack?.destination?.route
@@ -79,7 +97,18 @@ fun TimeCardRoot() {
                     )
                 }
                 composable(Tab.Reports.route) { ReportsScreen() }
-                composable(Tab.Settings.route) { SettingsScreen() }
+                composable(Tab.Settings.route) {
+                    SettingsScreen(
+                        onEditJob = { id -> nav.navigate("$JOB_ROUTE?${JobEditViewModel.ARG_ID}=$id") },
+                        onAddJob = { nav.navigate(JOB_ROUTE) },
+                    )
+                }
+                composable(
+                    route = "$JOB_ROUTE?${JobEditViewModel.ARG_ID}={${JobEditViewModel.ARG_ID}}",
+                    arguments = listOf(navArgument(JobEditViewModel.ARG_ID) { type = NavType.LongType; defaultValue = -1L }),
+                ) {
+                    JobEditScreen(onClose = { nav.popBackStack() })
+                }
                 composable(
                     route = "$SHIFT_ROUTE?${ShiftEditViewModel.ARG_ID}={${ShiftEditViewModel.ARG_ID}}" +
                         "&${ShiftEditViewModel.ARG_DATE}={${ShiftEditViewModel.ARG_DATE}}",

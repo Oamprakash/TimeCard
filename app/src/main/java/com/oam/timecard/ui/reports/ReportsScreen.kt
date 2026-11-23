@@ -55,6 +55,8 @@ import com.oam.timecard.ui.findActivity
 import com.oam.timecard.domain.engine.PayPeriodConfig
 import com.oam.timecard.domain.engine.PayPeriodType
 import com.oam.timecard.ui.JobDot
+import com.oam.timecard.ui.PayPeriodDialog
+import com.oam.timecard.ui.periodTypeLabel
 import com.oam.timecard.ui.formatDateMedium
 import com.oam.timecard.ui.formatDayShort
 import com.oam.timecard.ui.formatHm
@@ -228,78 +230,5 @@ private fun Line(label: String, value: String, bold: Boolean = false) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label)
         Text(value, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal)
-    }
-}
-
-@Composable
-private fun periodTypeLabel(type: PayPeriodType) = stringResource(
-    when (type) {
-        PayPeriodType.WEEKLY -> R.string.period_weekly
-        PayPeriodType.BIWEEKLY -> R.string.period_biweekly
-        PayPeriodType.SEMI_MONTHLY -> R.string.period_semi_monthly
-        PayPeriodType.MONTHLY -> R.string.period_monthly
-    }
-)
-
-/** Pay period and week start. Moves to the Settings tab in Sprint 5. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PayPeriodDialog(
-    initial: PayPeriodConfig,
-    initialWeekStart: DayOfWeek,
-    onDismiss: () -> Unit,
-    onSave: (PayPeriodConfig, DayOfWeek) -> Unit,
-) {
-    var type by remember { mutableStateOf(initial.type) }
-    var anchor by remember { mutableStateOf(initial.anchor) }
-    var weekStart by remember { mutableStateOf(initialWeekStart) }
-    var pickDate by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.pay_period_settings)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(stringResource(R.string.pay_period), style = MaterialTheme.typography.titleSmall)
-                PayPeriodType.entries.forEach { t ->
-                    FilterChip(selected = type == t, onClick = { type = t }, label = { Text(periodTypeLabel(t)) })
-                }
-                if (type != PayPeriodType.SEMI_MONTHLY) {
-                    OutlinedButton(onClick = { pickDate = true }) {
-                        Text(stringResource(R.string.period_starts_on, formatDateMedium(anchor)))
-                    }
-                } else {
-                    Text(stringResource(R.string.semi_monthly_hint), style = MaterialTheme.typography.bodySmall)
-                }
-                Text(stringResource(R.string.week_starts_on), style = MaterialTheme.typography.titleSmall)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY, DayOfWeek.SATURDAY).forEach { d ->
-                        FilterChip(
-                            selected = weekStart == d,
-                            onClick = { weekStart = d },
-                            label = { Text(d.getDisplayName(TextStyle.FULL, Locale.getDefault())) },
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onSave(PayPeriodConfig(type, anchor), weekStart) }) { Text(stringResource(R.string.save)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
-
-    if (pickDate) {
-        val pickerState = rememberDatePickerState(
-            initialSelectedDateMillis = anchor.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-        )
-        DatePickerDialog(
-            onDismissRequest = { pickDate = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    pickerState.selectedDateMillis?.let { anchor = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
-                    pickDate = false
-                }) { Text(stringResource(R.string.ok)) }
-            },
-            dismissButton = { TextButton(onClick = { pickDate = false }) { Text(stringResource(R.string.cancel)) } },
-        ) { DatePicker(pickerState) }
     }
 }
