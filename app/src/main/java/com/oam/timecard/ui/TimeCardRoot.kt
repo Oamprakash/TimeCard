@@ -26,10 +26,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.oam.timecard.R
 import com.oam.timecard.ui.clock.ClockScreen
+import com.oam.timecard.ui.reports.ReportsScreen
+import com.oam.timecard.ui.shift.ShiftEditScreen
+import com.oam.timecard.ui.shift.ShiftEditViewModel
+import com.oam.timecard.ui.timesheet.TimesheetScreen
 
-/** Navigation shell. Timesheet and Reports arrive in Sprint 3, Settings in Sprint 5. */
+/** Navigation shell. Settings arrives in Sprint 5. */
 private enum class Tab(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     Clock("clock", R.string.tab_clock, Icons.Filled.PlayArrow),
     Timesheet("timesheet", R.string.tab_timesheet, Icons.Filled.DateRange),
@@ -37,15 +43,18 @@ private enum class Tab(val route: String, @StringRes val label: Int, val icon: I
     Settings("settings", R.string.tab_settings, Icons.Filled.Settings),
 }
 
+private const val SHIFT_ROUTE = "shift"
+
 @Composable
 fun TimeCardRoot() {
     MaterialTheme {
         val nav = rememberNavController()
         val backStack by nav.currentBackStackEntryAsState()
         val current = backStack?.destination?.route
+        val onTab = current == null || Tab.entries.any { it.route == current }
         Scaffold(
             bottomBar = {
-                NavigationBar {
+                if (onTab) NavigationBar {
                     Tab.entries.forEach { tab ->
                         NavigationBarItem(
                             selected = current == tab.route,
@@ -65,8 +74,23 @@ fun TimeCardRoot() {
         ) { padding ->
             NavHost(nav, startDestination = Tab.Clock.route, modifier = Modifier.padding(padding)) {
                 composable(Tab.Clock.route) { ClockScreen() }
-                Tab.entries.filter { it != Tab.Clock }.forEach { tab ->
-                    composable(tab.route) { Placeholder(stringResource(tab.label)) }
+                composable(Tab.Timesheet.route) {
+                    TimesheetScreen(
+                        onAddShift = { date -> nav.navigate("$SHIFT_ROUTE?${ShiftEditViewModel.ARG_DATE}=$date") },
+                        onEditShift = { id -> nav.navigate("$SHIFT_ROUTE?${ShiftEditViewModel.ARG_ID}=$id") },
+                    )
+                }
+                composable(Tab.Reports.route) { ReportsScreen() }
+                composable(Tab.Settings.route) { Placeholder(stringResource(Tab.Settings.label)) }
+                composable(
+                    route = "$SHIFT_ROUTE?${ShiftEditViewModel.ARG_ID}={${ShiftEditViewModel.ARG_ID}}" +
+                        "&${ShiftEditViewModel.ARG_DATE}={${ShiftEditViewModel.ARG_DATE}}",
+                    arguments = listOf(
+                        navArgument(ShiftEditViewModel.ARG_ID) { type = NavType.LongType; defaultValue = -1L },
+                        navArgument(ShiftEditViewModel.ARG_DATE) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    ),
+                ) {
+                    ShiftEditScreen(onClose = { nav.popBackStack() })
                 }
             }
         }

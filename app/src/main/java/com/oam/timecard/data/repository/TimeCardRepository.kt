@@ -2,6 +2,7 @@ package com.oam.timecard.data.repository
 
 import androidx.room.withTransaction
 import com.oam.timecard.data.db.BreakEntity
+import com.oam.timecard.data.db.DayMarkEntity
 import com.oam.timecard.data.db.JobEntity
 import com.oam.timecard.data.db.JobWithRules
 import com.oam.timecard.data.db.ShiftEntity
@@ -12,6 +13,11 @@ import com.oam.timecard.data.db.toNewRuleSetEntity
 import com.oam.timecard.domain.engine.AutoBreakPolicy
 import com.oam.timecard.domain.engine.HoursCalculator
 import com.oam.timecard.domain.engine.PayPeriod
+import com.oam.timecard.domain.engine.ResolvedBreak
+import com.oam.timecard.domain.engine.ShiftDraft
+import com.oam.timecard.domain.engine.ShiftDrafts
+import com.oam.timecard.domain.engine.ShiftError
+import com.oam.timecard.domain.model.DayMarkType
 import com.oam.timecard.domain.model.JobPeriodSummary
 import com.oam.timecard.domain.model.PresetKind
 import java.math.BigDecimal
@@ -23,6 +29,12 @@ import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+
+sealed interface SaveShiftResult {
+    data class Saved(val id: Long) : SaveShiftResult
+    data class Invalid(val errors: Set<ShiftError>) : SaveShiftResult
+    data object NotFound : SaveShiftResult
+}
 
 class JobLimitReachedException : IllegalStateException("Free version allows $FREE_JOB_LIMIT jobs")
 
@@ -52,11 +64,15 @@ class TimeCardRepository @Inject constructor(
         currency: String,
         preset: PresetKind,
         unlimitedJobs: Boolean,
+        scheduledMinPerWeek: Int? = null,
     ): Long = db.withTransaction {
         if (!unlimitedJobs && jobs.activeCount() >= FREE_JOB_LIMIT) throw JobLimitReachedException()
         val ruleSetId = rules.insert(preset.toNewRuleSetEntity())
         jobs.insert(
-            JobEntity(name = name, color = color, hourlyRate = hourlyRate, currency = currency, ruleSetId = ruleSetId)
+            JobEntity(
+                name = name, color = color, hourlyRate = hourlyRate, currency = currency, ruleSetId = ruleSetId,
+                scheduledMinPerWeek = scheduledMinPerWeek,
+            )
         )
     }
 
@@ -119,6 +135,63 @@ class TimeCardRepository @Inject constructor(
     suspend fun setRunningNote(note: String?) = db.withTransaction {
         val running = shifts.getRunning() ?: return@withTransaction
         shifts.update(running.shift.copy(note = note?.trim()?.ifEmpty { null }))
+    }
+
+    fun observeMarks(from: LocalDate, to: LocalDate): Flow<List<DayMarkEntity>> = marks.observeRange(from, to)
+
+    suspend fun getShift(id: Long): ShiftWithBreaks? = shifts.getById(id)
+
+    /**
+     * Adds or edits a shift typed by the user. Validates (no future times, breaks inside the shift,
+     * no overlap with other shifts) before writing anything. Editing a running shift only changes its
+     * start, job and note; its end and breaks stay under the Clock tab's control.
+     */
+    suspend fun saveShift(draft: ShiftDraft, zone: ZoneId = ZoneId.systemDefault()): SaveShiftResult = db.withTransaction {
+        val existing = draft.id?.let { shifts.getById(it) }
+        if (draft.id != null && existing == null) return@withTransaction SaveShiftResult.NotFound
+        val now = clock.instant()
+        val running = existing != null && existing.shift.endUtc == null
+        val shiftZone = existing?.shift?.zoneId ?: zone
+
+        val resolved = ShiftDrafts.resolve(draft, shiftZone).let { r ->
+            if (running) r.copy(
+                end = null,
+                breaks = existing!!.breaks.filter { it.endUtc != null }.map { ResolvedBreak(it.startUtc, it.endUtc!!) },
+            ) else r
+        }
+        val errors = buildSet {
+            if (!running && resolved.end == null) add(ShiftError.EMPTY) // a new shift needs an end; use Clock in instead
+            val overlaps = shifts.countOverlapping(resolved.start, resolved.end ?: now, draft.id ?: 0)
+            addAll(ShiftDrafts.validate(resolved, now, overlaps))
+            val openBreak = existing?.breaks?.firstOrNull { it.endUtc == null }
+            if (running && openBreak != null && openBreak.startUtc.isBefore(resolved.start)) add(ShiftError.BREAK_OUTSIDE_SHIFT)
+        }
+        if (errors.isNotEmpty()) return@withTransaction SaveShiftResult.Invalid(errors)
+
+        val entity = ShiftEntity(
+            id = draft.id ?: 0,
+            jobId = draft.jobId,
+            startUtc = resolved.start,
+            endUtc = resolved.end,
+            zoneId = shiftZone,
+            workDate = resolved.start.atZone(shiftZone).toLocalDate(),
+            note = draft.note?.trim()?.ifEmpty { null },
+            edited = true,
+        )
+        val id = if (existing == null) shifts.insert(entity) else { shifts.update(entity); entity.id }
+        if (!running) {
+            shifts.deleteBreaksOf(id)
+            resolved.breaks.forEach { shifts.insertBreak(BreakEntity(shiftId = id, startUtc = it.start, endUtc = it.end)) }
+        }
+        SaveShiftResult.Saved(id)
+    }
+
+    suspend fun deleteShift(id: Long) = shifts.deleteById(id)
+
+    /** Sets or clears (type == null) the sick / holiday / paid-leave mark of one job on one day. */
+    suspend fun setDayMark(date: LocalDate, jobId: Long, type: DayMarkType?, paidMinutes: Int) {
+        if (type == null) marks.deleteFor(date, jobId)
+        else marks.upsert(DayMarkEntity(date, jobId, type, paidMinutes.coerceIn(0, 24 * 60)))
     }
 
     /** Pay-period summary for one job. Loads from the start of the first workweek so weekly OT is right. */

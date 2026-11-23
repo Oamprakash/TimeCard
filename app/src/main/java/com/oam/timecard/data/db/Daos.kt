@@ -61,6 +61,16 @@ interface ShiftDao {
     suspend fun closeOpenBreaks(shiftId: Long, end: Instant)
 
     @Transaction
+    @Query("SELECT * FROM shifts WHERE id = :id")
+    suspend fun getById(id: Long): ShiftWithBreaks?
+
+    @Query("DELETE FROM breaks WHERE shiftId = :shiftId")
+    suspend fun deleteBreaksOf(shiftId: Long)
+
+    @Query("DELETE FROM shifts WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Transaction
     @Query("SELECT * FROM shifts WHERE workDate BETWEEN :from AND :to ORDER BY startUtc")
     fun observeRange(from: LocalDate, to: LocalDate): Flow<List<ShiftWithBreaks>>
 
@@ -80,6 +90,9 @@ interface ShiftDao {
 interface DayMarkDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsert(mark: DayMarkEntity)
     @Delete suspend fun delete(mark: DayMarkEntity)
+
+    @Query("DELETE FROM day_marks WHERE date = :date AND jobId = :jobId")
+    suspend fun deleteFor(date: LocalDate, jobId: Long)
 
     @Query("SELECT * FROM day_marks WHERE date BETWEEN :from AND :to")
     fun observeRange(from: LocalDate, to: LocalDate): Flow<List<DayMarkEntity>>

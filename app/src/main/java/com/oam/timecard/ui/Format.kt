@@ -1,0 +1,45 @@
+package com.oam.timecard.ui
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.oam.timecard.R
+import com.oam.timecard.domain.engine.DurationParts
+import java.math.BigDecimal
+import java.text.NumberFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.time.Duration
+import java.util.Currency
+import java.util.Locale
+
+/** "7h 05m" / "7 Std. 05 Min." */
+@Composable
+fun formatHm(d: Duration): String {
+    val p = DurationParts.of(d)
+    return stringResource(R.string.hours_minutes, p.hours, p.minutes)
+}
+
+fun formatMoney(amount: BigDecimal, currency: String): String =
+    NumberFormat.getCurrencyInstance(Locale.getDefault()).apply {
+        runCatching { this.currency = Currency.getInstance(currency) }
+    }.format(amount)
+
+private val timeFormatter: DateTimeFormatter get() = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+
+/** Local wall-clock time of an instant in the zone it was recorded in, e.g. "9:05 AM" / "09:05". */
+fun formatTime(instant: Instant, zone: ZoneId): String = timeFormatter.format(instant.atZone(zone))
+
+fun formatTime(time: java.time.LocalTime): String = timeFormatter.format(time)
+
+/** "Mon 23 Nov" style, following the device locale. */
+fun formatDayShort(date: LocalDate): String =
+    DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()).format(date)
+
+fun formatDateMedium(date: LocalDate): String =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(date)
+
+fun formatMonth(date: LocalDate): String =
+    DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()).format(date)
