@@ -1,4 +1,4 @@
-# Time Card — Sprint 1 (Core engine)
+# Time Card
 
 Offline-first Android time card. Kotlin, Jetpack Compose, Room, Hilt. Single module.
 
@@ -22,8 +22,35 @@ domain/engine   HoursCalculator  – hours, daily + weekly OT, double time, gros
 data/db         Room entities, DAOs, converters, mappers (schema exported to app/schemas)
 data/repository TimeCardRepository – clock in/out, breaks, job limit, period summary
 data/settings   DataStore: week start, pay period, onboarding, remove-ads cache
-ui              Bottom-nav shell with 4 placeholder tabs (filled in Sprints 2–3)
+clock           ClockController (single entry point for punches), ClockNotifier, receivers
+ui/clock        Clock tab: job chips, big Clock in/out button, break button, live timer, totals
+ui              Bottom-nav shell (Timesheet/Reports in Sprint 3, Settings in Sprint 5)
 ```
+
+## Sprint status
+
+- [x] Sprint 1: core engine (Room schema, presets, calculator, tests)
+- [x] Sprint 2: clock flow (Clock tab, clock in/out, breaks, auto-deduct, ongoing notification, reboot recovery)
+- [ ] Sprint 3: timesheet and reports
+- [ ] Sprint 4: export and monetization
+- [ ] Sprint 5: polish and ship
+
+## Clock flow (Sprint 2)
+
+- All state changes go through `ClockController`, whether they come from the Clock tab, the notification buttons or the restore receiver. It updates Room and then re-posts or removes the notification, so the two can't disagree.
+- The ongoing notification uses the system chronometer and doesn't need a foreground service. While working, it counts worked time with breaks excluded. During a break, it counts the length of the current break.
+- After a reboot, an app update, or a clock or time-zone change, `ClockRestoreReceiver` re-posts the notification from what's stored. On Android 14 and later, users can swipe the notification away; opening the app or the Clock tab brings it back.
+- On Android 13 and later, the app asks for notification permission **after** the first clock-in, so the punch is never delayed.
+- Punches are de-duplicated: the button is disabled while a write is in flight, and `clockIn` is idempotent.
+
+### Manual test checklist (Galaxy M02s)
+
+1. On first launch, add a job and clock in. The timer should start in under 1 s.
+2. Use Break / End break from both the app and the notification. The timer pauses during a break.
+3. Force-stop the app, reopen it, and check the timer is still correct.
+4. Reboot the phone. The notification should come back without opening the app, though it can take a minute on Samsung.
+5. Clock out from the notification. The notification disappears, and the Clock tab shows today's and this week's totals.
+6. With the Germany preset, work past 6 h without a break. The "Break rule not met" warning should appear.
 
 ## Engine rules (as implemented)
 

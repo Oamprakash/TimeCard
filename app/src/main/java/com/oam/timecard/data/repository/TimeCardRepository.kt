@@ -18,6 +18,7 @@ import java.math.BigDecimal
 import java.time.Clock
 import java.time.DayOfWeek
 import java.time.Duration
+import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -106,6 +107,18 @@ class TimeCardRepository @Inject constructor(
         val running = shifts.getRunning() ?: return@withTransaction false
         shifts.closeOpenBreaks(running.shift.id, clock.instant())
         true
+    }
+
+    suspend fun running(): ShiftWithBreaks? = shifts.getRunning()
+
+    suspend fun jobWithRules(jobId: Long): JobWithRules? = jobs.getWithRules(jobId)
+
+    /** All jobs' shifts whose local start date is in [from]..[to]. */
+    fun observeShifts(from: LocalDate, to: LocalDate): Flow<List<ShiftWithBreaks>> = shifts.observeRange(from, to)
+
+    suspend fun setRunningNote(note: String?) = db.withTransaction {
+        val running = shifts.getRunning() ?: return@withTransaction
+        shifts.update(running.shift.copy(note = note?.trim()?.ifEmpty { null }))
     }
 
     /** Pay-period summary for one job. Loads from the start of the first workweek so weekly OT is right. */
