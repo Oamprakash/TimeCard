@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -54,7 +55,10 @@ import com.oamsapps.punchd.export.ExportFormat
 import com.oamsapps.punchd.ui.findActivity
 import com.oamsapps.punchd.domain.engine.PayPeriodConfig
 import com.oamsapps.punchd.domain.engine.PayPeriodType
+import com.oamsapps.punchd.ui.EmptyState
+import com.oamsapps.punchd.ui.ErrorState
 import com.oamsapps.punchd.ui.JobDot
+import com.oamsapps.punchd.ui.ReportsSkeleton
 import com.oamsapps.punchd.ui.PayPeriodDialog
 import com.oamsapps.punchd.ui.periodTypeLabel
 import com.oamsapps.punchd.ui.formatDateMedium
@@ -79,6 +83,7 @@ fun ReportsScreen(viewModel: ReportsViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val failed = stringResource(R.string.export_failed)
+    val retryLabel = stringResource(R.string.retry)
     val billingUnavailable = stringResource(R.string.billing_unavailable)
     val scope = rememberCoroutineScope()
 
@@ -86,14 +91,20 @@ fun ReportsScreen(viewModel: ReportsViewModel = hiltViewModel()) {
         viewModel.events.collect { e ->
             when (e) {
                 is ExportEvent.Share -> runCatching { context.startActivity(e.intent) }
-                ExportEvent.Failed -> snackbar.showSnackbar(failed)
+                is ExportEvent.Failed -> if (
+                    snackbar.showSnackbar(failed, actionLabel = retryLabel, withDismissAction = true) == SnackbarResult.ActionPerformed
+                ) viewModel.export(e.format) // no second ad: the user already watched one
             }
         }
     }
 
     val period = state.period
+    if (state.loadError) {
+        ErrorState(onRetry = viewModel::reload)
+        return
+    }
     if (state.loading || period == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        ReportsSkeleton()
         return
     }
 
@@ -121,7 +132,9 @@ fun ReportsScreen(viewModel: ReportsViewModel = hiltViewModel()) {
                 }
 
                 if (state.jobs.isEmpty()) {
-                    Text(stringResource(R.string.no_jobs_yet), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    EmptyState(title = stringResource(R.string.no_jobs_title), body = stringResource(R.string.no_jobs_yet))
+                } else if (state.jobs.all { it.summary.worked.isZero && it.summary.paidLeave.isZero }) {
+                    Text(stringResource(R.string.empty_period_text), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 state.jobs.forEach { r ->

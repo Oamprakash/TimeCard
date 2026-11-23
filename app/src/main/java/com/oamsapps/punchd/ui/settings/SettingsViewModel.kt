@@ -21,6 +21,8 @@ import java.time.DayOfWeek
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
+import com.oamsapps.punchd.util.retryable
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -31,6 +33,7 @@ import kotlinx.coroutines.launch
 data class SettingsJob(val label: JobLabel, val archived: Boolean)
 
 data class SettingsUiState(
+    val loadError: Boolean = false,
     val settings: AppSettings? = null,
     val jobs: List<SettingsJob> = emptyList(),
     val price: String? = null,
@@ -43,8 +46,10 @@ data class SettingsUiState(
 sealed interface SettingsEvent {
     data class Share(val intent: Intent) : SettingsEvent
     data class Imported(val jobs: Int, val shifts: Int) : SettingsEvent
-    data object ImportFailed : SettingsEvent
+    /** [retry] is null when retrying can't help (the file isn't a valid backup). */
+    data class ImportFailed(val retry: (() -> Unit)?) : SettingsEvent
     data object ExportFailed : SettingsEvent
+    data object SaveFailed : SettingsEvent
 }
 
 @HiltViewModel
@@ -57,10 +62,15 @@ class SettingsViewModel @Inject constructor(
     private val controller: ClockController,
 ) : ViewModel() {
 
-    val state: StateFlow<SettingsUiState> = combine(
-        settings.settings, repo.allJobs, billing.price, billing.pending, consent.privacyOptionsRequired,
-    ) { s, jobs, price, pending, privacy ->
-        SettingsUiState(s, jobs.map { SettingsJob(it.toLabel(), it.job.archived) }, price, pending, privacy)
+    private val reloads = MutableStateFlow(0)
+    fun reload() { reloads.value++ }
+
+    val state: StateFlow<SettingsUiState> = retryable(reloads, { SettingsUiState(loadError = true) }) {
+        combine(
+            settings.settings, repo.allJobs, billing.price, billing.pending, consent.privacyOptionsRequired,
+        ) { s, jobs, price, pending, privacy ->
+            SettingsUiState(false, s, jobs.map { SettingsJob(it.toLabel(), it.job.archived) }, price, pending, privacy)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     private val _events = Channel<SettingsEvent>(Channel.BUFFERED)
@@ -68,15 +78,25 @@ class SettingsViewModel @Inject constructor(
 
     init { billing.refresh() }
 
-    fun setPayPeriod(config: PayPeriodConfig, weekStart: DayOfWeek) = viewModelScope.launch {
+    fun setPayPeriod(config: PayPeriodConfig, weekStart: DayOfWeek) = save {
         settings.setPayPeriod(config)
         settings.setWeekStart(weekStart)
     }
 
     /** Re-plans reminders for a running shift right away. */
-    fun setReminders(hours: Int?, ruleWarnings: Boolean) = viewModelScope.launch {
+    fun setReminders(hours: Int?, ruleWarnings: Boolean) = save {
         settings.setReminders(hours, ruleWarnings)
         controller.sync()
+    }
+
+    private fun save(block: suspend () -> Unit) = viewModelScope.launch {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _events.send(SettingsEvent.SaveFailed)
+        }
     }
 
     fun exportBackup() = viewModelScope.launch {
@@ -96,9 +116,9 @@ class SettingsViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: BackupFormatException) {
-            _events.send(SettingsEvent.ImportFailed)
+            _events.send(SettingsEvent.ImportFailed(retry = null)) // a bad file stays bad
         } catch (e: Exception) {
-            _events.send(SettingsEvent.ImportFailed)
+            _events.send(SettingsEvent.ImportFailed(retry = { importBackup(uri) })) // e.g. couldn't read the file
         }
     }
 

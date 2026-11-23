@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,6 +50,8 @@ import com.oamsapps.punchd.BuildConfig
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.data.settings.DEFAULT_STILL_CLOCKED_IN_HOURS
 import com.oamsapps.punchd.domain.engine.PayPeriodType
+import com.oamsapps.punchd.ui.ErrorState
+import com.oamsapps.punchd.ui.FormSkeleton
 import com.oamsapps.punchd.ui.JobDot
 import com.oamsapps.punchd.ui.PayPeriodDialog
 import com.oamsapps.punchd.ui.findActivity
@@ -78,6 +81,9 @@ fun SettingsScreen(
     val importFailed = stringResource(R.string.backup_import_failed)
     val exportFailed = stringResource(R.string.export_failed)
     val importedFmt = stringResource(R.string.backup_imported)
+    val importReadFailed = stringResource(R.string.backup_read_failed)
+    val saveFailed = stringResource(R.string.save_failed)
+    val retryLabel = stringResource(R.string.retry)
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> confirmImport = uri }
 
@@ -86,13 +92,28 @@ fun SettingsScreen(
             when (e) {
                 is SettingsEvent.Share -> runCatching { context.startActivity(e.intent) }
                 is SettingsEvent.Imported -> snackbar.showSnackbar(String.format(importedFmt, e.jobs, e.shifts))
-                SettingsEvent.ImportFailed -> snackbar.showSnackbar(importFailed)
-                SettingsEvent.ExportFailed -> snackbar.showSnackbar(exportFailed)
+                is SettingsEvent.ImportFailed -> {
+                    val retry = e.retry
+                    if (retry == null) snackbar.showSnackbar(importFailed)
+                    else if (snackbar.showSnackbar(importReadFailed, actionLabel = retryLabel, withDismissAction = true) == SnackbarResult.ActionPerformed) retry()
+                }
+                SettingsEvent.ExportFailed -> if (
+                    snackbar.showSnackbar(exportFailed, actionLabel = retryLabel, withDismissAction = true) == SnackbarResult.ActionPerformed
+                ) viewModel.exportBackup()
+                SettingsEvent.SaveFailed -> snackbar.showSnackbar(saveFailed)
             }
         }
     }
 
     val settings = s.settings
+    if (s.loadError) {
+        ErrorState(onRetry = viewModel::reload)
+        return
+    }
+    if (settings == null) {
+        FormSkeleton(fields = 6)
+        return
+    }
     Box(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),

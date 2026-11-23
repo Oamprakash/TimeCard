@@ -23,6 +23,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
+import com.oamsapps.punchd.util.retryable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -52,6 +54,8 @@ data class JobUi(
 
 data class ClockUiState(
     val loading: Boolean = true,
+    /** Reading the database failed; the screen shows Retry. */
+    val loadError: Boolean = false,
     val jobs: List<JobUi> = emptyList(),
     val selectedJobId: Long? = null,
     val running: RunningSnapshot? = null,
@@ -66,7 +70,7 @@ data class ClockUiState(
     val selectedJob: JobUi? get() = jobs.firstOrNull { it.id == selectedJobId }
 }
 
-enum class ClockMessage { JOB_LIMIT, INVALID_JOB }
+enum class ClockMessage { JOB_LIMIT, INVALID_JOB, SAVE_FAILED, PUNCH_FAILED }
 
 private data class WeekWindow(val from: LocalDate, val to: LocalDate)
 
@@ -105,15 +109,25 @@ class ClockViewModel @Inject constructor(
             .distinctUntilChanged()
             .flatMapLatest { w -> repo.observeShifts(w.from, w.to).map { w to it } }
 
-    val state: StateFlow<ClockUiState> = combine(
-        repo.activeJobs, repo.runningShift, settings, weekShifts, ticker,
-    ) { jobs, running, s, (window, shifts), now ->
-        build(jobs, running, s, window, shifts, now)
+    private val reloads = MutableStateFlow(0)
+
+    val state: StateFlow<ClockUiState> = retryable(reloads, { ClockUiState(loading = false, loadError = true) }) {
+        combine(
+            repo.activeJobs, repo.runningShift, settings, weekShifts, ticker,
+        ) { jobs, running, s, (window, shifts), now ->
+            build(jobs, running, s, window, shifts, now)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ClockUiState())
+
+    /** Retry after a load error. */
+    fun reload() { reloads.value++ }
+
+    /** The punch that failed, so the snackbar's Retry can run it again. */
+    private var failedPunch: (suspend () -> Unit)? = null
 
     init {
         // Covers a notification the user swiped away (Android 14+ allows that).
-        viewModelScope.launch { controller.sync() }
+        viewModelScope.launch { runCatching { controller.sync() } }
     }
 
     private fun build(
@@ -181,7 +195,7 @@ class ClockViewModel @Inject constructor(
 
     /** Called after the notification permission dialog; posts the notification if it was granted. */
     fun onNotificationPermissionResult() {
-        viewModelScope.launch { controller.sync() }
+        viewModelScope.launch { runCatching { controller.sync() } }
     }
 
     fun addJob(name: String, rateText: String, currency: String, preset: PresetKind, color: Int, scheduledText: String = "") {
@@ -203,14 +217,35 @@ class ClockViewModel @Inject constructor(
                 settingsRepo.setSelectedJob(id)
             } catch (_: JobLimitReachedException) {
                 _messages.tryEmit(ClockMessage.JOB_LIMIT)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _messages.tryEmit(ClockMessage.SAVE_FAILED)
             }
         }
     }
 
+    /** Runs the punch that failed last time (snackbar "Retry"). */
+    fun retryPunch() { failedPunch?.let { punch(it) } }
+
+    /**
+     * One tap = one write. A failure never crashes or leaves the button stuck: it shows
+     * "Couldn't save" with Retry, and the stored state stays whatever it was before the tap.
+     */
     private fun punch(block: suspend () -> Unit) {
         if (!_busy.compareAndSet(expect = false, update = true)) return
         viewModelScope.launch {
-            try { block() } finally { _busy.value = false }
+            try {
+                block()
+                failedPunch = null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                failedPunch = block
+                _messages.tryEmit(ClockMessage.PUNCH_FAILED)
+            } finally {
+                _busy.value = false
+            }
         }
     }
 }

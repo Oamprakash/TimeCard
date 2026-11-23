@@ -26,14 +26,15 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,6 +59,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.ads.AdBanner
+import com.oamsapps.punchd.ui.ClockSkeleton
+import com.oamsapps.punchd.ui.ErrorState
 import com.oamsapps.punchd.ui.formatHm
 import com.oamsapps.punchd.ui.formatMoney
 import com.oamsapps.punchd.domain.engine.DurationParts
@@ -81,9 +84,21 @@ fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
 
     val limitMsg = stringResource(R.string.job_limit)
     val invalidMsg = stringResource(R.string.invalid_job)
+    val saveFailedMsg = stringResource(R.string.save_failed)
+    val punchFailedMsg = stringResource(R.string.punch_failed)
+    val retryLabel = stringResource(R.string.retry)
     LaunchedEffect(Unit) {
-        viewModel.messages.collect {
-            snackbar.showSnackbar(if (it == ClockMessage.JOB_LIMIT) limitMsg else invalidMsg)
+        viewModel.messages.collect { msg ->
+            when (msg) {
+                ClockMessage.JOB_LIMIT -> snackbar.showSnackbar(limitMsg)
+                ClockMessage.INVALID_JOB -> snackbar.showSnackbar(invalidMsg)
+                ClockMessage.SAVE_FAILED -> snackbar.showSnackbar(saveFailedMsg)
+                // Stays until dismissed: a missed punch matters more than a stray snackbar.
+                ClockMessage.PUNCH_FAILED -> if (
+                    snackbar.showSnackbar(punchFailedMsg, actionLabel = retryLabel, withDismissAction = true,
+                        duration = SnackbarDuration.Indefinite) == SnackbarResult.ActionPerformed
+                ) viewModel.retryPunch()
+            }
         }
     }
 
@@ -102,7 +117,8 @@ fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
 
     Box(Modifier.fillMaxSize()) {
         when {
-            state.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+            state.loading -> ClockSkeleton()
+            state.loadError -> ErrorState(onRetry = viewModel::reload)
             state.jobs.isEmpty() -> JobForm(
                 title = stringResource(R.string.first_job_title),
                 onSave = { name, rate, currency, preset, scheduled ->

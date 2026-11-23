@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oamsapps.punchd.R
+import com.oamsapps.punchd.ui.FormSkeleton
 import com.oamsapps.punchd.domain.model.PresetKind
 import androidx.compose.foundation.background
 
@@ -59,7 +60,10 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
             )
         },
     ) { padding ->
-        if (s.loading) return@Scaffold
+        if (s.loading) {
+            FormSkeleton(fields = 7)
+            return@Scaffold
+        }
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -151,5 +155,6 @@ private fun errorText(e: JobFormError) = stringResource(
         JobFormError.DOUBLE_BEFORE_OT -> R.string.err_job_double_before_ot
         JobFormError.JOB_LIMIT -> R.string.job_limit
         JobFormError.ARCHIVE_RUNNING -> R.string.err_archive_running
+        JobFormError.SAVE_FAILED -> R.string.save_failed_try_again
     }
 )

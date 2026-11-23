@@ -223,4 +223,17 @@
     <string name="widget_name">Punchd</string>
     <string name="widget_open_app">Einrichten</string>
     <string name="widget_today">Heute: %1$s</string>
+    <string name="backup_read_failed">Die Datei konnte nicht gelesen werden. Prüfe, ob sie noch vorhanden ist, und versuche es erneut.</string>
+    <string name="empty_month_title">Keine Schichten in diesem Monat</string>
+    <string name="empty_period_text">Noch keine Stunden in diesem Abrechnungszeitraum.</string>
+    <string name="empty_timesheet_text">Stempel im Tab Stempeln ein, wenn deine Schicht beginnt, oder trage eine bereits gearbeitete Schicht nach.</string>
+    <string name="empty_week_title">Keine Schichten in dieser Woche</string>
+    <string name="load_error_text">Deine Stunden sind weiterhin auf diesem Handy gespeichert. Versuche es erneut; falls es wieder passiert, starte die App neu oder schaffe etwas Speicherplatz.</string>
+    <string name="load_error_title">Daten konnten nicht geladen werden</string>
+    <string name="loading">Wird geladen</string>
+    <string name="no_jobs_title">Noch keine Jobs</string>
+    <string name="punch_failed">Ein- oder Ausstempeln konnte nicht gespeichert werden. Es wurde nichts geändert.</string>
+    <string name="retry">Erneut versuchen</string>
+    <string name="save_failed">Speichern fehlgeschlagen. Bitte versuche es erneut.</string>
+    <string name="save_failed_try_again">Speichern fehlgeschlagen. Deine Eingaben sind noch da; tippe auf Speichern, um es erneut zu versuchen.</string>
 </resources>

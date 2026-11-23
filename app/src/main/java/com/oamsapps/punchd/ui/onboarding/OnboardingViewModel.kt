@@ -21,6 +21,7 @@ import java.time.temporal.WeekFields
 import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +44,8 @@ data class OnboardingState(
     val weekStart: DayOfWeek = DayOfWeek.MONDAY,
     val jobError: Boolean = false,
     val saving: Boolean = false,
+    /** Finishing failed; tapping Start again retries. */
+    val saveFailed: Boolean = false,
 )
 
 @HiltViewModel
@@ -111,9 +114,10 @@ class OnboardingViewModel @Inject constructor(
     fun finish() {
         val s = _state.value
         if (s.saving || !jobValid(s)) return
-        _state.update { it.copy(saving = true) }
+        _state.update { it.copy(saving = true, saveFailed = false) }
         viewModelScope.launch {
-            val jobId = repo.addJob(
+          try {
+            val jobId = createdJobId ?: repo.addJob(
                 name = s.jobName.trim(),
                 color = 0xFF1E88E5.toInt(),
                 hourlyRate = BigDecimal(s.rate.trim().replace(',', '.')),
@@ -121,7 +125,7 @@ class OnboardingViewModel @Inject constructor(
                 preset = s.preset,
                 unlimitedJobs = true, // first job
                 scheduledMinPerWeek = HoursInput.parseMinutes(s.scheduledHours),
-            )
+            ).also { createdJobId = it }
             if (s.autoBreak) {
                 repo.jobWithRules(jobId)?.let { j ->
                     repo.updateJob(j.job, j.rules.copy(autoBreakMin = 30, autoBreakAfterMin = 6 * 60))
@@ -131,6 +135,14 @@ class OnboardingViewModel @Inject constructor(
             settings.setWeekStart(s.weekStart)
             settings.setSelectedJob(jobId)
             settings.setOnboardingDone()
+          } catch (e: CancellationException) {
+            throw e
+          } catch (_: Exception) {
+            _state.update { it.copy(saving = false, saveFailed = true) }
+          }
         }
     }
+
+    /** Set once the first job exists, so a retry after a later failure doesn't create it twice. */
+    private var createdJobId: Long? = null
 }

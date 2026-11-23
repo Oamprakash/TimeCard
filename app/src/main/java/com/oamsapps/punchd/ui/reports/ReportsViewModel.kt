@@ -29,6 +29,7 @@ import java.time.DayOfWeek
 import java.time.Duration
 import java.time.ZoneId
 import javax.inject.Inject
+import com.oamsapps.punchd.util.retryable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -47,7 +48,8 @@ import kotlinx.coroutines.launch
 
 sealed interface ExportEvent {
     data class Share(val intent: Intent) : ExportEvent
-    data object Failed : ExportEvent
+    /** Retry exports again without another ad: the user already earned it. */
+    data class Failed(val format: ExportFormat) : ExportEvent
 }
 
 data class JobReport(val job: JobLabel, val summary: JobPeriodSummary, val scheduled: Duration?)
@@ -57,6 +59,7 @@ data class CurrencyTotal(val currency: String, val gross: BigDecimal)
 
 data class ReportsUiState(
     val loading: Boolean = true,
+    val loadError: Boolean = false,
     val period: PayPeriod? = null,
     val config: PayPeriodConfig? = null,
     val weekStart: DayOfWeek = DayOfWeek.MONDAY,
@@ -107,7 +110,7 @@ class ReportsViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _events.send(ExportEvent.Failed)
+                _events.send(ExportEvent.Failed(format))
             } finally {
                 _exporting.value = null
             }
@@ -137,7 +140,11 @@ class ReportsViewModel @Inject constructor(
         PeriodKey(p, s.payPeriod, s.weekStart, off)
     }.distinctUntilChanged()
 
-    val state: StateFlow<ReportsUiState> = key.flatMapLatest { k ->
+    private val reloads = MutableStateFlow(0)
+    fun reload() { reloads.value++ }
+
+    val state: StateFlow<ReportsUiState> = retryable(reloads, { ReportsUiState(loading = false, loadError = true) }) {
+      key.flatMapLatest { k ->
         combine(
             repo.observeShifts(HoursCalculator.loadFrom(k.period.start, k.weekStart), k.period.endInclusive),
             repo.observeMarks(k.period.start, k.period.endInclusive),
@@ -170,6 +177,7 @@ class ReportsViewModel @Inject constructor(
                 },
             )
         }
+      }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
 
     fun previous() { offset.value -= 1 }

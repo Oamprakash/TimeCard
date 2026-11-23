@@ -17,7 +17,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -29,8 +28,13 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -47,7 +51,10 @@ import com.oamsapps.punchd.domain.engine.Timesheet
 import com.oamsapps.punchd.domain.engine.TimesheetDay
 import com.oamsapps.punchd.domain.model.DayFlag
 import com.oamsapps.punchd.domain.model.DayMarkType
+import com.oamsapps.punchd.ui.EmptyState
+import com.oamsapps.punchd.ui.ErrorState
 import com.oamsapps.punchd.ui.JobDot
+import com.oamsapps.punchd.ui.TimesheetSkeleton
 import com.oamsapps.punchd.ui.formatDayShort
 import com.oamsapps.punchd.ui.formatHm
 import com.oamsapps.punchd.ui.formatMonth
@@ -64,6 +71,14 @@ fun TimesheetScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var openDay by rememberSaveable { mutableStateOf<LocalDate?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val saveFailedMsg = stringResource(R.string.save_failed)
+    val retryLabel = stringResource(R.string.retry)
+    LaunchedEffect(Unit) {
+        viewModel.saveFailed.collect { retry ->
+            if (snackbar.showSnackbar(saveFailedMsg, actionLabel = retryLabel, withDismissAction = true) == SnackbarResult.ActionPerformed) retry()
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -95,8 +110,19 @@ fun TimesheetScreen(
             }
 
             val ts = state.timesheet
-            if (state.loading || ts == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            if (state.loadError) {
+                ErrorState(onRetry = viewModel::reload)
+            } else if (state.loading || ts == null) {
+                TimesheetSkeleton(rows = if (state.mode == TimesheetMode.WEEK) 7 else 10)
+            } else if (ts.days.none { it.shifts.isNotEmpty() || it.marks.isNotEmpty() }) {
+                // Nothing recorded in this week/month: say so and offer the next step.
+                EmptyState(
+                    title = stringResource(if (state.mode == TimesheetMode.WEEK) R.string.empty_week_title else R.string.empty_month_title),
+                    body = stringResource(R.string.empty_timesheet_text),
+                    actionLabel = stringResource(R.string.add_shift),
+                    onAction = { onAddShift(state.today.coerceIn(state.from, state.to)) },
+                    modifier = Modifier.padding(top = 24.dp),
+                )
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp),
@@ -123,6 +149,7 @@ fun TimesheetScreen(
             text = { Text(stringResource(R.string.add_shift)) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
     }
 
     val day = openDay?.let { d -> state.timesheet?.days?.firstOrNull { it.date == d } }

@@ -48,6 +48,7 @@ import dagger.hilt.components.SingletonComponent
 import java.time.Clock
 import java.time.Duration
 import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 @EntryPoint
@@ -75,7 +76,10 @@ private data class WidgetState(
 class TimeCardWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val state = load(context)
+        val state = try { load(context) } catch (ex: CancellationException) { throw ex } catch (_: Exception) {
+            WidgetState(hasJob = false, running = false, onBreak = false, jobName = null, chronometerBase = 0L,
+                today = context.getString(R.string.load_error_title))
+        }
         provideContent { GlanceTheme { Content(state) } }
     }
 
@@ -153,13 +157,20 @@ class TimeCardWidget : GlanceAppWidget() {
 class ClockToggleAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val e = context.entry()
-        if (e.repo().running() != null) {
-            e.controller().clockOut()
-        } else {
-            val jobs = e.repo().activeJobs.first()
-            val selected = e.settings().settings.first().selectedJobId
-            val jobId = jobs.firstOrNull { it.job.id == selected }?.job?.id ?: jobs.firstOrNull()?.job?.id ?: return
-            e.controller().clockIn(jobId)
+        try {
+            if (e.repo().running() != null) {
+                e.controller().clockOut()
+            } else {
+                val jobs = e.repo().activeJobs.first()
+                val selected = e.settings().settings.first().selectedJobId
+                val jobId = jobs.firstOrNull { it.job.id == selected }?.job?.id ?: jobs.firstOrNull()?.job?.id ?: return
+                e.controller().clockIn(jobId)
+            }
+        } catch (ex: CancellationException) {
+            throw ex
+        } catch (ex: Exception) {
+            // The widget keeps showing the stored state; tapping again retries.
+            android.util.Log.w("Punchd", "Widget clock action failed", ex)
         }
     }
 }

@@ -51,6 +51,7 @@ import com.oamsapps.punchd.domain.engine.ShiftError
 import com.oamsapps.punchd.ui.JobDot
 import com.oamsapps.punchd.ui.formatDateMedium
 import com.oamsapps.punchd.ui.formatHm
+import com.oamsapps.punchd.ui.FormSkeleton
 import com.oamsapps.punchd.ui.findActivity
 import com.oamsapps.punchd.ui.formatTime
 import java.time.Instant
@@ -89,7 +90,10 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
             )
         },
     ) { padding ->
-        if (s.loading) return@Scaffold
+        if (s.loading) {
+            FormSkeleton(fields = 5)
+            return@Scaffold
+        }
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -150,6 +154,9 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
                 Text(stringResource(R.string.worked_preview, formatHm(it)), fontWeight = FontWeight.SemiBold)
             }
 
+            if (s.saveFailed) {
+                Text(stringResource(R.string.save_failed_try_again), color = MaterialTheme.colorScheme.error)
+            }
             s.errors.forEach { e ->
                 Text(errorText(e), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }

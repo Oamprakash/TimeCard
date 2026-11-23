@@ -22,6 +22,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +47,8 @@ data class ShiftEditUiState(
     val note: String = "",
     val errors: Set<ShiftError> = emptySet(),
     val saving: Boolean = false,
+    /** Writing failed (not a validation problem); the screen offers to try again. */
+    val saveFailed: Boolean = false,
 ) {
     /** End on the clock at or before start = next day (night shift). */
     val endsNextDay: Boolean get() = !isRunning && !end.isAfter(start)
@@ -147,15 +150,21 @@ class ShiftEditViewModel @Inject constructor(
     fun save() {
         val s = _state.value
         if (s.saving || s.jobId == null) return
-        _state.update { it.copy(saving = true, errors = emptySet()) }
+        _state.update { it.copy(saving = true, errors = emptySet(), saveFailed = false) }
         viewModelScope.launch {
-            when (val result = repo.saveShift(s.toDraft())) {
-                is SaveShiftResult.Saved -> {
-                    controller.sync() // editing the running shift's start moves the notification timer
-                    _done.trySend(true)
+            try {
+                when (val result = repo.saveShift(s.toDraft())) {
+                    is SaveShiftResult.Saved -> {
+                        runCatching { controller.sync() } // editing the running shift's start moves the notification timer
+                        _done.trySend(true)
+                    }
+                    is SaveShiftResult.Invalid -> _state.update { it.copy(saving = false, errors = result.errors) }
+                    SaveShiftResult.NotFound -> _done.trySend(false)
                 }
-                is SaveShiftResult.Invalid -> _state.update { it.copy(saving = false, errors = result.errors) }
-                SaveShiftResult.NotFound -> _done.trySend(false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(saving = false, saveFailed = true) } // the typed values stay; Save again retries
             }
         }
     }
@@ -163,9 +172,15 @@ class ShiftEditViewModel @Inject constructor(
     fun delete() {
         val id = shiftId ?: return
         viewModelScope.launch {
-            repo.deleteShift(id)
-            controller.sync() // deleting the running shift removes the notification
-            _done.trySend(false)
+            try {
+                repo.deleteShift(id)
+                runCatching { controller.sync() } // deleting the running shift removes the notification
+                _done.trySend(false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(saveFailed = true) }
+            }
         }
     }
 
@@ -180,5 +195,5 @@ class ShiftEditViewModel @Inject constructor(
     )
 
     private inline fun edit(crossinline f: ShiftEditUiState.() -> ShiftEditUiState) =
-        _state.update { it.f().copy(errors = emptySet()) }
+        _state.update { it.f().copy(errors = emptySet(), saveFailed = false) }
 }

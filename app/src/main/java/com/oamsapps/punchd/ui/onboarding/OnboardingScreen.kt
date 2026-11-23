@@ -65,6 +65,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
                 OnboardingStep.PAY_PERIOD -> PayPeriodStep(s, viewModel)
                 OnboardingStep.DONE -> DoneStep()
             }
+            if (s.saveFailed) Text(stringResource(R.string.save_failed_try_again), color = MaterialTheme.colorScheme.error)
         }
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (s.step != OnboardingStep.COUNTRY) TextButton(onClick = viewModel::back) { Text(stringResource(R.string.back)) }

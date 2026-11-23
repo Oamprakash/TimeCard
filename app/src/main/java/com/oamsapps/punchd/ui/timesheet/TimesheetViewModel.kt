@@ -20,7 +20,11 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
+import com.oamsapps.punchd.util.retryable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,6 +41,7 @@ enum class TimesheetMode { WEEK, MONTH }
 
 data class TimesheetUiState(
     val loading: Boolean = true,
+    val loadError: Boolean = false,
     val mode: TimesheetMode = TimesheetMode.WEEK,
     val from: LocalDate = LocalDate.now(),
     val to: LocalDate = LocalDate.now(),
@@ -72,7 +77,14 @@ class TimesheetViewModel @Inject constructor(
         }
     }.distinctUntilChanged()
 
-    val state: StateFlow<TimesheetUiState> = range.flatMapLatest { r ->
+    private val reloads = MutableStateFlow(0)
+
+    /** Day-mark saves that failed, for the snackbar's Retry. */
+    private val _saveFailed = Channel<() -> Unit>(Channel.CONFLATED)
+    val saveFailed = _saveFailed.receiveAsFlow()
+
+    val state: StateFlow<TimesheetUiState> = retryable(reloads, { TimesheetUiState(loading = false, loadError = true) }) {
+      range.flatMapLatest { r ->
         combine(
             repo.observeShifts(HoursCalculator.loadFrom(r.from, r.weekStart), r.to),
             repo.observeMarks(r.from, r.to),
@@ -97,7 +109,10 @@ class TimesheetViewModel @Inject constructor(
                 ),
             )
         }
+      }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TimesheetUiState())
+
+    fun reload() { reloads.value++ }
 
     fun setMode(m: TimesheetMode) { mode.value = m }
 
@@ -110,6 +125,14 @@ class TimesheetViewModel @Inject constructor(
     }
 
     fun setDayMark(date: LocalDate, jobId: Long, type: DayMarkType?, paid: Duration) {
-        viewModelScope.launch { repo.setDayMark(date, jobId, type, paid.toMinutes().toInt()) }
+        viewModelScope.launch {
+            try {
+                repo.setDayMark(date, jobId, type, paid.toMinutes().toInt())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _saveFailed.trySend { setDayMark(date, jobId, type, paid) }
+            }
+        }
     }
 }

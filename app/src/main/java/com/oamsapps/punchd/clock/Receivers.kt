@@ -25,6 +25,9 @@ private fun BroadcastReceiver.runAsync(context: Context, block: suspend (ClockCo
     entry.scope().launch {
         try {
             block(entry.clockController())
+        } catch (e: Exception) {
+            // Nothing is half-written (each punch is one transaction); the next app start re-syncs.
+            android.util.Log.w("Punchd", "Clock action failed", e)
         } finally {
             pending.finish()
         }

@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
@@ -18,5 +19,8 @@ class RootViewModel @Inject constructor(settings: SettingsRepository, repo: Time
     /** Anyone who already has a job (e.g. from a test build before onboarding existed) skips onboarding. */
     val state: StateFlow<RootState> = combine(settings.settings, repo.allJobs) { s, jobs ->
         if (s.onboardingDone || jobs.isNotEmpty()) RootState.MAIN else RootState.ONBOARDING
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, RootState.LOADING)
+    }
+        // If this read fails, go to the tabs: each shows its own error state with Retry.
+        .catch { emit(RootState.MAIN) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, RootState.LOADING)
 }

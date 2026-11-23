@@ -136,6 +136,19 @@ The full pre-release list is in `docs/launch-checklist.md`.
 - **Icon:** an adaptive launcher icon with a monochrome layer for Android 13 themed icons. The 512 px store icon is in `docs/store/`.
 - **Store and release docs:** `docs/store-listing.md` (EN/DE text with the spec keywords; the app name is still open), `docs/privacy-policy.md` plus `docs/privacy.html` to host, and `docs/launch-checklist.md` (Data safety answers, release steps, device tests).
 
+## Loading, empty and error states
+
+| Screen | Loading | Empty | Error / retry |
+|---|---|---|---|
+| Clock | Skeleton (chips, timer, button, totals) | First-job form | Full-screen "Couldn't load" + Retry; a failed punch shows a snackbar with Retry and never changes stored state |
+| Timesheet | Skeleton (totals + day rows) | "No shifts this week/month" + Add shift | Full-screen Retry; a failed sick/holiday save shows a snackbar with Retry |
+| Reports | Skeleton (header + job cards) | "No jobs yet" / "No hours in this pay period yet" | Full-screen Retry; a failed export shows Retry (no second ad) |
+| Settings | Form skeleton | n/a | Full-screen Retry; backup export and file-read failures show Retry (an invalid backup file doesn't, since retrying can't help) |
+| Shift and job editors, onboarding | Form skeleton | n/a | Inline "Couldn't save"; the typed values stay, and Save retries. Onboarding never creates the first job twice |
+| Notification buttons, widget, boot | n/a | n/a | Failures are logged, never crash; the next app start re-syncs |
+
+Database streams use `util/retryable`: an exception becomes an error state, and Retry re-subscribes. It's unit-tested.
+
 ## Engine rules (as implemented)
 
 - Times are stored as UTC instants plus a zone ID. Elapsed time is calculated from the instants, so shifts that cross a DST change get the correct number of hours.

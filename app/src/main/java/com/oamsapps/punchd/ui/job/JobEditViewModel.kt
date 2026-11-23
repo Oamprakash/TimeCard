@@ -17,6 +17,7 @@ import java.math.BigDecimal
 import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +29,7 @@ import kotlinx.coroutines.launch
 
 val JOB_COLORS = listOf(0xFF1E88E5, 0xFF43A047, 0xFFFB8C00, 0xFF8E24AA, 0xFFE53935, 0xFF00897B, 0xFF6D4C41, 0xFF546E7A).map { it.toInt() }
 
-enum class JobFormError { NAME, RATE, CURRENCY, HOURS, MULTIPLIER, DOUBLE_BEFORE_OT, JOB_LIMIT, ARCHIVE_RUNNING }
+enum class JobFormError { NAME, RATE, CURRENCY, HOURS, MULTIPLIER, DOUBLE_BEFORE_OT, JOB_LIMIT, ARCHIVE_RUNNING, SAVE_FAILED }
 
 /** Editor fields as typed. Hours are text so "7,5" works; blank = rule off. */
 data class JobEditState(
@@ -118,7 +119,11 @@ class JobEditViewModel @Inject constructor(
     fun setArchived(archived: Boolean) {
         val id = jobId ?: return
         viewModelScope.launch {
-            if (repo.setArchived(id, archived)) _state.update { it.copy(archived = archived, error = null) }
+            val ok = try { repo.setArchived(id, archived) } catch (e: CancellationException) { throw e } catch (_: Exception) {
+                _state.update { it.copy(error = JobFormError.SAVE_FAILED) }
+                return@launch
+            }
+            if (ok) _state.update { it.copy(archived = archived, error = null) }
             else _state.update { it.copy(error = JobFormError.ARCHIVE_RUNNING) }
         }
     }
@@ -149,10 +154,14 @@ class JobEditViewModel @Inject constructor(
                         rules.copy(id = orig.second.id),
                     )
                 }
-                controller.sync() // job name in the notification, reminder rules
+                runCatching { controller.sync() } // job name in the notification, reminder rules
                 _done.trySend(Unit)
             } catch (_: JobLimitReachedException) {
                 _state.update { it.copy(saving = false, error = JobFormError.JOB_LIMIT) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(saving = false, error = JobFormError.SAVE_FAILED) }
             }
         }
     }
