@@ -1,10 +1,11 @@
 # Launch checklist (v1.0.0 → closed testing → production)
 
-## 1. Decide and set the name
-- [ ] Pick a name that is free on Play in the US and in Germany (see `store-listing.md`; ShiftClock, HourLog and Stempeluhr are taken or crowded)
-- [ ] `app_name` in `values/strings.xml` and `values-de/strings.xml`, `widget_name`
-- [ ] `applicationId` in `app/build.gradle.kts` (currently `com.oam.timecard`; **can't be changed after the first upload**)
-- [ ] Replace `[Name]` in `docs/store-listing.md`, `docs/privacy-policy.md`, `docs/privacy.html`
+## 1. Name
+- [x] Name: **Punchd** (decided 23 Nov 2026; see `store-listing.md`)
+- [x] `app_name` and `widget_name` set to Punchd in English and German
+- [ ] `applicationId` in `app/build.gradle.kts` (currently `com.oamsapps.punchd`; **can't be changed after the first upload**)
+- [x] Name filled in `docs/store-listing.md`, `docs/privacy-policy.md`, `docs/privacy.html`
+- [ ] Before the first upload: search Play for "Punchd" (US and German VPN), and USPTO for "PUNCHD" / "PUNCHH" plus DPMA / EUIPO for "Punchd"
 
 ## 2. Accounts and IDs (never commit these)
 - [ ] AdMob: app + 4 ad units (banner, native, rewarded, interstitial) → `~/.gradle/gradle.properties` (keys in README)
@@ -15,7 +16,7 @@
 - [ ] Play Console → License testing: add your Gmail accounts (test the purchase without being charged)
 
 ## 3. Policy pages
-- [ ] Publish `docs/privacy.html` at `https://oamprakash.github.io/timecard/privacy.html` (the URL Settings opens: `PRIVACY_POLICY_URL` in `SettingsScreen.kt`)
+- [ ] Publish `docs/privacy.html` at `https://oamprakash.github.io/punchd/privacy.html` (the URL Settings opens: `PRIVACY_POLICY_URL` in `SettingsScreen.kt`)
 - [ ] Fill in contact email and effective date; have it reviewed
 
 ## 4. Play Console forms
@@ -34,7 +35,7 @@
 - [ ] `./gradlew testDebugUnitTest` green
 - [ ] `./gradlew bundleRelease` with Play App Signing (upload key in `~/.gradle/gradle.properties` or Android Studio)
 - [ ] The build log has **no** "ADMOB_… not set" warning (otherwise the release uses test ads)
-- [ ] Commit `app/schemas/com.oam.timecard.data.db.TimeCardDatabase/1.json` after the first build. From now on, every schema change needs a Room migration.
+- [ ] Commit `app/schemas/com.oamsapps.punchd.data.db.TimeCardDatabase/1.json` after the first build. From now on, every schema change needs a Room migration.
 
 ## 6. Device tests (Galaxy M02s, plus the Xiaomi when it arrives)
 - [ ] Cold start → Clock tab shows the running state in under 1 s

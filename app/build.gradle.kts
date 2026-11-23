@@ -28,11 +28,11 @@ fun admobId(key: String, release: Boolean): String {
 }
 
 android {
-    namespace = "com.oam.timecard"
+    namespace = "com.oamsapps.punchd"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.oam.timecard" // change once the app name is decided
+        applicationId = "com.oamsapps.punchd" // Play package name: can never change after the first upload
         minSdk = 26                         // java.time without desugaring
         targetSdk = 36
         versionCode = 1

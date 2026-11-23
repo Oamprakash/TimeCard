@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Stempeluhr</string>
+    <string name="app_name">Punchd</string>
     <string name="tab_clock">Stempeln</string>
     <string name="tab_timesheet">Stundenzettel</string>
     <string name="tab_reports">Berichte</string>
@@ -157,9 +157,9 @@
     <string name="auto_break_onboarding">Zieht bei Schichten über 6 Std. 30 Min. ab, wenn du keine Pause erfasst hast.</string>
     <string name="auto_break_title">Pause automatisch abziehen</string>
     <string name="backup_export">Exportieren</string>
-    <string name="backup_file_subject">Stempeluhr-Backup</string>
+    <string name="backup_file_subject">Punchd-Backup</string>
     <string name="backup_import">Importieren</string>
-    <string name="backup_import_failed">Diese Datei ist kein gültiges Backup. Es wurde nichts geändert.</string>
+    <string name="backup_import_failed">Diese Datei ist kein gültiges Punchd-Backup. Es wurde nichts geändert.</string>
     <string name="backup_import_q">Alle Daten ersetzen?</string>
     <string name="backup_import_warning">Beim Import werden alle Jobs, Schichten und Einstellungen auf diesem Handy durch das Backup ersetzt. Exportiere vorher ein Backup, wenn du die aktuellen Daten behalten willst.</string>
     <string name="backup_imported">%1$d Jobs und %2$d Schichten wiederhergestellt.</string>
@@ -220,7 +220,7 @@
     <string name="settings_reminders">Erinnerungen</string>
     <string name="version">Version %1$s</string>
     <string name="widget_description">Vom Startbildschirm ein- und ausstempeln und die heutigen Stunden sehen.</string>
-    <string name="widget_name">Stempeluhr</string>
+    <string name="widget_name">Punchd</string>
     <string name="widget_open_app">Einrichten</string>
     <string name="widget_today">Heute: %1$s</string>
 </resources>

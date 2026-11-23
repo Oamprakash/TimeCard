@@ -1,22 +1,23 @@
 # Google Play store listing (EN + DE)
 
-## App name: still to decide
+## App name: Punchd
 
-The spec's three candidates are taken or crowded (checked 23 Nov 2026):
+Decided 23 Nov 2026. Package name `com.oamsapps.punchd`.
 
-- **ShiftClock**: "ShiftClock: Hours & Pay" (OverClocked) has been on Google Play since March 2026.
-- **HourLog**: "HourLog: Work Hours Tracker" is on the App Store with almost the same feature list.
-- **Stempeluhr**: several German apps already use it, e.g. "Stempeluhr 2.1" and "Automatische StempelUhr".
+Checked before choosing:
+- No current app called "Punchd" turned up.
+- Google's old PUNCHD trademark (software classes 9/42/35) is dead.
+- The live "PUNCH'D" mark is for caffeine gummies (classes 5/30).
+- Watch item: PUNCHH is registered in class 42 for a restaurant loyalty platform. It's a different market, but the names sound alike, so get it cleared before filing a trademark.
+- Re-check Play (US and Germany) and the USPTO, DPMA and EUIPO registers just before the first upload.
 
-Pick a name that is free on Play in both markets, then replace `[Name]` below and `app_name` in
-`res/values*/strings.xml` (the German `app_name` is currently "Stempeluhr" and should change too).
-Titles are max 30 characters; `[Name]: Hours & Overtime` leaves 24 characters for the name part.
+"Punch" means nothing to German users (they *stempeln*), so the German title carries the keyword: `Punchd: Arbeitszeiterfassung`.
 
 ---
 
 ## English (en-US)
 
-**Title (≤30):** `[Name]: Hours & Overtime`
+**Title (≤30):** `Punchd: Hours & Overtime`
 
 **Short description (≤80, 69 used):**
 Tap to clock in. See your hours, overtime and pay. No account needed.
@@ -25,7 +26,7 @@ Tap to clock in. See your hours, overtime and pay. No account needed.
 
 Your own time card. Clock in with one tap and always know how many hours you've worked this week and what you should be paid.
 
-Your employer's system tracks time for the company. [Name] is your own record, so you can check your pay stub. No account, no company setup, and it works offline.
+Your employer's system tracks time for the company. Punchd is your own record, so you can check your pay stub. No account, no company setup, and it works offline.
 
 **ONE-TAP TIME CLOCK**
 • One big Clock in / Clock out button. The timer keeps running even if the app is closed or the phone restarts
@@ -65,7 +66,7 @@ Pay figures are estimates to help you check your pay stub. They aren't legal or 
 
 ## German (de-DE)
 
-**Titel (≤30):** `[Name]: Arbeitszeiterfassung`
+**Titel (≤30):** `Punchd: Arbeitszeiterfassung`
 
 **Kurzbeschreibung (≤80, 74 used):**
 Ein Tipp zum Stempeln: Stunden, Überstunden und Lohn im Blick. Ohne Konto.
@@ -74,7 +75,7 @@ Ein Tipp zum Stempeln: Stunden, Überstunden und Lohn im Blick. Ohne Konto.
 
 Deine eigene Arbeitszeiterfassung. Mit einem Tipp einstempeln und jederzeit sehen, wie viele Stunden du gearbeitet hast und welcher Lohn dir zusteht.
 
-Das System deines Arbeitgebers erfasst die Zeit für die Firma. [Name] ist deine eigene Aufzeichnung, damit du deine Lohnabrechnung prüfen kannst. Kein Konto, keine Firmeneinrichtung, funktioniert offline.
+Das System deines Arbeitgebers erfasst die Zeit für die Firma. Punchd ist deine eigene Aufzeichnung, damit du deine Lohnabrechnung prüfen kannst. Kein Konto, keine Firmeneinrichtung, funktioniert offline.
 
 **STEMPELN MIT EINEM TIPP**
 • Ein großer Knopf zum Ein- und Ausstempeln. Die Zeit läuft weiter, auch wenn die App geschlossen oder das Handy neu gestartet wird

@@ -1,14 +1,14 @@
-# Privacy policy: [Name] (Android)
+# Privacy policy: Punchd (Android)
 
 *Draft for review before publishing; I'm not a lawyer. Publish the HTML version at
-`https://oamprakash.github.io/timecard/privacy.html` (the URL the app's Settings opens; see `docs/privacy.html`).
-Replace `[Name]` and `[your email]`.*
+`https://oamprakash.github.io/punchd/privacy.html` (the URL the app's Settings opens; see `docs/privacy.html`).
+Replace `[your email]` and the effective date.*
 
 **Effective date:** [date of release]
 
 ## English
 
-[Name] ("the app") is a personal work-hours tracker made by Oamprakash R. This policy explains what happens to your data.
+Punchd ("the app") is a personal work-hours tracker made by Oamprakash R. This policy explains what happens to your data.
 
 **Your time data stays on your device.** Jobs, hourly rates, shifts, breaks, notes, day marks and settings are stored only in the app's private storage on your phone. The app has no account and no server, and the developer never receives this data.
 
@@ -30,7 +30,7 @@ Replace `[Name]` and `[your email]`.*
 
 ## Deutsch
 
-[Name] („die App“) ist eine persönliche Arbeitszeiterfassung von Oamprakash R. Diese Erklärung beschreibt, was mit deinen Daten geschieht.
+Punchd („die App“) ist eine persönliche Arbeitszeiterfassung von Oamprakash R. Diese Erklärung beschreibt, was mit deinen Daten geschieht.
 
 **Deine Zeitdaten bleiben auf deinem Gerät.** Jobs, Stundenlöhne, Schichten, Pausen, Notizen, Abwesenheiten und Einstellungen werden ausschließlich im privaten Speicher der App auf deinem Handy gespeichert. Es gibt kein Konto und keinen Server; der Entwickler erhält diese Daten nie.
 

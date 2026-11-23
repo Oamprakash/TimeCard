@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Time Card</string>
+    <string name="app_name">Punchd</string>
     <string name="tab_clock">Clock</string>
     <string name="tab_timesheet">Timesheet</string>
     <string name="tab_reports">Reports</string>
@@ -157,9 +157,9 @@
     <string name="auto_break_onboarding">Deducts 30 min from shifts over 6 h if you didn\'t record a break.</string>
     <string name="auto_break_title">Auto-deduct break</string>
     <string name="backup_export">Export</string>
-    <string name="backup_file_subject">Time Card backup</string>
+    <string name="backup_file_subject">Punchd backup</string>
     <string name="backup_import">Import</string>
-    <string name="backup_import_failed">That file isn\'t a valid Time Card backup. Nothing was changed.</string>
+    <string name="backup_import_failed">That file isn\'t a valid Punchd backup. Nothing was changed.</string>
     <string name="backup_import_q">Replace all data?</string>
     <string name="backup_import_warning">Importing replaces every job, shift and setting on this phone with the backup. Export a backup first if you want to keep the current data.</string>
     <string name="backup_imported">Restored %1$d jobs and %2$d shifts.</string>
@@ -220,7 +220,7 @@
     <string name="settings_reminders">Reminders</string>
     <string name="version">Version %1$s</string>
     <string name="widget_description">Clock in and out from your home screen and see today\'s hours.</string>
-    <string name="widget_name">Time Card</string>
+    <string name="widget_name">Punchd</string>
     <string name="widget_open_app">Set up</string>
     <string name="widget_today">Today: %1$s</string>
 </resources>

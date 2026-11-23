@@ -1,4 +1,4 @@
-# Time Card
+# Punchd
 
 Offline-first Android time card. Kotlin, Jetpack Compose, Room, Hilt. Single module.
 

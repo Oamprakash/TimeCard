@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TimeCard"
+rootProject.name = "Punchd"
 include(":app")
