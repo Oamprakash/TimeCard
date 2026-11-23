@@ -58,12 +58,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oamsapps.punchd.R
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.graphics.StrokeCap
 import com.oamsapps.punchd.ui.theme.clockInColor
 import com.oamsapps.punchd.ui.theme.clockOutColor
 import com.oamsapps.punchd.ads.AdBanner
 import com.oamsapps.punchd.ui.ClockSkeleton
 import com.oamsapps.punchd.ui.ErrorState
+import com.oamsapps.punchd.ui.HoursProgress
+import com.oamsapps.punchd.ui.PayDisclaimer
+import com.oamsapps.punchd.ui.SummaryRow
 import com.oamsapps.punchd.ui.formatHm
 import com.oamsapps.punchd.ui.formatMoney
 import com.oamsapps.punchd.domain.engine.DurationParts
@@ -270,7 +272,7 @@ private fun TotalsCard(state: ClockUiState) {
     val overtimeColor = clockOutColor()
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(20.dp)) {
-            TotalRow(stringResource(R.string.today), formatHm(state.today))
+            SummaryRow(stringResource(R.string.today), formatHm(state.today))
             if (DayFlag.MISSING_BREAK in state.todayFlags) {
                 Spacer(Modifier.height(6.dp))
                 Text(stringResource(R.string.flag_missing_break), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -281,19 +283,11 @@ private fun TotalsCard(state: ClockUiState) {
             }
 
             Spacer(Modifier.height(16.dp))
-            TotalRow(stringResource(R.string.this_week), formatHm(state.week))
+            SummaryRow(stringResource(R.string.this_week), formatHm(state.week))
             state.weeklyThreshold?.let { threshold ->
                 // Equal space above and below the bar.
                 Spacer(Modifier.height(12.dp))
-                LinearProgressIndicator(
-                    progress = { DurationParts.progress(state.week, threshold) },
-                    modifier = Modifier.fillMaxWidth().height(6.dp),
-                    color = if (state.weekOvertime > Duration.ZERO) overtimeColor else MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeCap = StrokeCap.Round,
-                    gapSize = 0.dp,
-                    drawStopIndicator = {},
-                )
+                HoursProgress(DurationParts.progress(state.week, threshold), over = state.weekOvertime > Duration.ZERO)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     stringResource(R.string.week_of_threshold, formatHm(minOf(state.week, threshold)), formatHm(threshold)),
@@ -310,26 +304,15 @@ private fun TotalsCard(state: ClockUiState) {
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(16.dp))
-            TotalRow(stringResource(R.string.est_pay), formatMoney(state.weekPay, state.currency))
+            SummaryRow(stringResource(R.string.est_pay), formatMoney(state.weekPay, state.currency))
 
             // The disclaimer lives with the number it qualifies, quietly.
             Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(R.string.pay_disclaimer),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-            )
+            PayDisclaimer()
         }
     }
 }
 
-@Composable
-private fun TotalRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        Text(value, style = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum"), fontWeight = FontWeight.SemiBold)
-    }
-}
 
 /** Shared by first-run and the add-job dialog. Full onboarding arrives in Sprint 5. */
 @Composable

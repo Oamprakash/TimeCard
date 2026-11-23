@@ -142,9 +142,11 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    /** Tighter spacing when shown inside a card above other content. */
+    compact: Boolean = false,
 ) {
     Column(
-        modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp),
+        modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = if (compact) 16.dp else 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

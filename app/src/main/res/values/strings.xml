@@ -57,7 +57,6 @@
     <string name="delete">Delete</string>
     <string name="delete_running_warning">You are clocked in on this shift. Deleting it also stops the timer.</string>
     <string name="delete_shift_q">Delete this shift?</string>
-    <string name="difference">Difference</string>
     <string name="double_time">Double time</string>
     <string name="edit_shift">Edit shift</string>
     <string name="end">End</string>
@@ -96,7 +95,6 @@
     <string name="regular">Regular</string>
     <string name="remove_break">Remove break</string>
     <string name="running_shift_hint">You\'re clocked in on this shift. Clock out on the Clock tab; here you can fix the start time, job and note.</string>
-    <string name="scheduled">Scheduled</string>
     <string name="scheduled_hours_optional">Scheduled hours per week (optional)</string>
     <string name="semi_monthly_hint">Periods run from the 1st to the 15th and from the 16th to the end of the month.</string>
     <string name="start">Start</string>
@@ -236,4 +234,10 @@
     <string name="retry">Retry</string>
     <string name="save_failed">Couldn\'t save. Please try again.</string>
     <string name="save_failed_try_again">Couldn\'t save. Your changes are still here; tap Save to try again.</string>
+    <string name="est_gross_pay">Est. gross pay</string>
+    <string name="left_before_overtime">%1$s left before overtime</string>
+    <string name="left_of_schedule">%1$s left of your scheduled hours</string>
+    <string name="no_hours">No hours</string>
+    <string name="open_day">Open day</string>
+    <string name="over_schedule">%1$s over your scheduled hours</string>
 </resources>

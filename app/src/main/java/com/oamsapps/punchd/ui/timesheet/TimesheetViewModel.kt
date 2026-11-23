@@ -13,6 +13,7 @@ import com.oamsapps.punchd.domain.model.DayMarkType
 import com.oamsapps.punchd.ui.JobLabel
 import com.oamsapps.punchd.ui.toLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.math.BigDecimal
 import java.time.Clock
 import java.time.DayOfWeek
 import java.time.Duration
@@ -39,6 +40,16 @@ import kotlinx.coroutines.launch
 
 enum class TimesheetMode { WEEK, MONTH }
 
+/** What "worked / target" compares against in the summary card. */
+enum class TargetKind {
+    /** The jobs' scheduled hours (pro-rated for months). */
+    SCHEDULED,
+    /** The weekly overtime threshold (week view, single job without a schedule). */
+    OVERTIME,
+}
+
+data class CurrencyAmount(val currency: String, val amount: BigDecimal)
+
 data class TimesheetUiState(
     val loading: Boolean = true,
     val loadError: Boolean = false,
@@ -48,6 +59,10 @@ data class TimesheetUiState(
     val today: LocalDate = LocalDate.now(),
     val jobs: List<JobLabel> = emptyList(),
     val timesheet: Timesheet? = null,
+    val target: Duration? = null,
+    val targetKind: TargetKind? = null,
+    /** Estimated gross pay for the range, one entry per currency. */
+    val pay: List<CurrencyAmount> = emptyList(),
 ) {
     fun job(id: Long) = jobs.firstOrNull { it.id == id }
 }
@@ -91,6 +106,24 @@ class TimesheetViewModel @Inject constructor(
             repo.activeJobs,
             ticker,
         ) { shifts, marks, jobs, now ->
+            val infos = jobs.map { it.toJobInfo() }
+            val ts = TimesheetBuilder.build(
+                jobs = infos,
+                shifts = shifts.map { it.toDomain() },
+                marks = marks.map { it.toDomain() },
+                weekStart = r.weekStart,
+                from = r.from,
+                to = r.to,
+                now = now,
+            )
+            // A target only when it means something: the schedule, or (one job, week view) its overtime threshold.
+            val overtimeTarget = infos.singleOrNull()?.rules?.weeklyOtAfter?.takeIf { r.mode == TimesheetMode.WEEK }
+            val (target, kind) = when {
+                ts.scheduled != null -> ts.scheduled to TargetKind.SCHEDULED
+                overtimeTarget != null -> overtimeTarget to TargetKind.OVERTIME
+                else -> null to null
+            }
+            val currencyById = jobs.associate { it.job.id to it.job.currency }
             TimesheetUiState(
                 loading = false,
                 mode = r.mode,
@@ -98,15 +131,11 @@ class TimesheetViewModel @Inject constructor(
                 to = r.to,
                 today = today(),
                 jobs = jobs.map { it.toLabel() },
-                timesheet = TimesheetBuilder.build(
-                    jobs = jobs.map { it.toJobInfo() },
-                    shifts = shifts.map { it.toDomain() },
-                    marks = marks.map { it.toDomain() },
-                    weekStart = r.weekStart,
-                    from = r.from,
-                    to = r.to,
-                    now = now,
-                ),
+                timesheet = ts,
+                target = target,
+                targetKind = kind,
+                pay = ts.perJob.groupBy { currencyById[it.jobId] ?: "" }
+                    .map { (cur, list) -> CurrencyAmount(cur, list.fold(BigDecimal.ZERO) { a, j -> a + j.grossPay }) },
             )
         }
       }

@@ -57,7 +57,6 @@
     <string name="delete">Löschen</string>
     <string name="delete_running_warning">Du bist in dieser Schicht eingestempelt. Beim Löschen stoppt auch die Zeitmessung.</string>
     <string name="delete_shift_q">Diese Schicht löschen?</string>
-    <string name="difference">Differenz</string>
     <string name="double_time">Doppelter Satz</string>
     <string name="edit_shift">Schicht bearbeiten</string>
     <string name="end">Ende</string>
@@ -96,7 +95,6 @@
     <string name="regular">Regulär</string>
     <string name="remove_break">Pause entfernen</string>
     <string name="running_shift_hint">Du bist in dieser Schicht eingestempelt. Ausstempeln geht im Tab Stempeln; hier kannst du Beginn, Job und Notiz korrigieren.</string>
-    <string name="scheduled">Soll</string>
     <string name="scheduled_hours_optional">Sollstunden pro Woche (optional)</string>
     <string name="semi_monthly_hint">Zeiträume laufen vom 1. bis 15. und vom 16. bis Monatsende.</string>
     <string name="start">Beginn</string>
@@ -236,4 +234,10 @@
     <string name="retry">Erneut versuchen</string>
     <string name="save_failed">Speichern fehlgeschlagen. Bitte versuche es erneut.</string>
     <string name="save_failed_try_again">Speichern fehlgeschlagen. Deine Eingaben sind noch da; tippe auf Speichern, um es erneut zu versuchen.</string>
+    <string name="est_gross_pay">Gesch. Bruttolohn</string>
+    <string name="left_before_overtime">Noch %1$s bis zu Überstunden</string>
+    <string name="left_of_schedule">Noch %1$s bis zu deinen Sollstunden</string>
+    <string name="no_hours">Keine Stunden</string>
+    <string name="open_day">Tag öffnen</string>
+    <string name="over_schedule">%1$s über deinen Sollstunden</string>
 </resources>
