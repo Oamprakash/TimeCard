@@ -6,7 +6,12 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -16,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -46,9 +53,18 @@ private fun rememberShowAds(): Boolean {
  */
 @Composable
 fun AdBanner(modifier: Modifier = Modifier, visible: Boolean = true) {
+    if (LocalInspectionMode.current) {
+        if (visible) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            androidx.compose.foundation.layout.Box(modifier.fillMaxWidth().height(58.dp).background(MaterialTheme.colorScheme.surfaceVariant))
+        }
+        return
+    }
     if (!rememberShowAds() || !visible) return
     val lifecycleOwner = LocalLifecycleOwner.current
-    BoxWithConstraints(modifier.fillMaxWidth()) {
+    // Anchored strip: thin divider on top, flush with the navigation bar below.
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    BoxWithConstraints(modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 4.dp)) {
         val widthDp = maxWidth.value.toInt()
         var adView by remember { mutableStateOf<AdView?>(null) }
         AndroidView(

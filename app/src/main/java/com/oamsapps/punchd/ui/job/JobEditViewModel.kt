@@ -12,6 +12,7 @@ import com.oamsapps.punchd.data.repository.TimeCardRepository
 import com.oamsapps.punchd.data.settings.SettingsRepository
 import com.oamsapps.punchd.domain.model.HoursInput
 import com.oamsapps.punchd.domain.model.PresetKind
+import com.oamsapps.punchd.util.sentenceCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.util.Currency
@@ -203,7 +204,7 @@ class JobEditViewModel @Inject constructor(
             breakWarn2AfterMin = presetRules.breakWarn2AfterMin, breakWarn2Min = presetRules.breakWarn2Min,
         )
         val job = JobEntity(
-            name = s.name.trim(), color = s.color, hourlyRate = rate, currency = currency,
+            name = s.name.sentenceCase(), color = s.color, hourlyRate = rate, currency = currency,
             ruleSetId = rules.id, scheduledMinPerWeek = scheduled,
         )
         return job to rules

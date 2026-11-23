@@ -1,10 +1,10 @@
 package com.oamsapps.punchd.ui
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,6 +30,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.ui.clock.ClockScreen
+import com.oamsapps.punchd.ui.theme.PunchdTheme
 import com.oamsapps.punchd.ui.job.JobEditScreen
 import com.oamsapps.punchd.ui.job.JobEditViewModel
 import com.oamsapps.punchd.ui.onboarding.OnboardingScreen
@@ -39,10 +41,16 @@ import com.oamsapps.punchd.ui.settings.SettingsScreen
 import com.oamsapps.punchd.ui.timesheet.TimesheetScreen
 
 /** Navigation shell. */
-private enum class Tab(val route: String, @StringRes val label: Int, val icon: ImageVector) {
+private enum class Tab(
+    val route: String,
+    @StringRes val label: Int,
+    val icon: ImageVector? = null,
+    @DrawableRes val iconRes: Int? = null,
+) {
     Clock("clock", R.string.tab_clock, Icons.Filled.PlayArrow),
     Timesheet("timesheet", R.string.tab_timesheet, Icons.Filled.DateRange),
-    Reports("reports", R.string.tab_reports, Icons.Filled.Info),
+    // Bar chart (not in the core icon set, so it's a vector drawable); "i" would read as Help/About.
+    Reports("reports", R.string.tab_reports, iconRes = R.drawable.ic_nav_reports),
     Settings("settings", R.string.tab_settings, Icons.Filled.Settings),
 }
 
@@ -52,7 +60,7 @@ private const val JOB_ROUTE = "job"
 @Composable
 fun TimeCardRoot(rootViewModel: RootViewModel = hiltViewModel()) {
     val root by rootViewModel.state.collectAsStateWithLifecycle()
-    MaterialTheme {
+    PunchdTheme {
         when (root) {
             RootState.LOADING -> Unit // first frame only; the clock state shows within the 1 s budget
             RootState.ONBOARDING -> OnboardingScreen()
@@ -81,7 +89,7 @@ private fun MainTabs() {
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(tab.icon, contentDescription = null) },
+                            icon = { Icon(tab.icon ?: ImageVector.vectorResource(tab.iconRes!!), contentDescription = null) },
                             label = { Text(stringResource(tab.label)) },
                         )
                     }

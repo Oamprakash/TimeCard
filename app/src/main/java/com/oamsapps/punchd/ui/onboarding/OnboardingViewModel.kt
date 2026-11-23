@@ -11,6 +11,7 @@ import com.oamsapps.punchd.domain.model.Countries
 import com.oamsapps.punchd.domain.model.HoursInput
 import com.oamsapps.punchd.domain.model.PresetKind
 import com.oamsapps.punchd.domain.model.WorkCountry
+import com.oamsapps.punchd.util.sentenceCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.time.Clock
@@ -118,7 +119,7 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
           try {
             val jobId = createdJobId ?: repo.addJob(
-                name = s.jobName.trim(),
+                name = s.jobName.sentenceCase(),
                 color = 0xFF1E88E5.toInt(),
                 hourlyRate = BigDecimal(s.rate.trim().replace(',', '.')),
                 currency = s.currency,

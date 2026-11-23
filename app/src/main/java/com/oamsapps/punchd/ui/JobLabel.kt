@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.oamsapps.punchd.data.db.JobWithRules
+import com.oamsapps.punchd.util.sentenceCase
 import java.time.Duration
 
 /** The parts of a job that screens display. */
@@ -23,7 +24,7 @@ data class JobLabel(
 
 fun JobWithRules.toLabel() = JobLabel(
     id = job.id,
-    name = job.name,
+    name = job.name.sentenceCase(),
     color = job.color,
     currency = job.currency,
     scheduledPerWeek = job.scheduledMinPerWeek?.let { Duration.ofMinutes(it.toLong()) },

@@ -24,6 +24,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import com.oamsapps.punchd.util.retryable
+import com.oamsapps.punchd.util.sentenceCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
@@ -139,7 +140,7 @@ class ClockViewModel @Inject constructor(
         now: Instant,
     ): ClockUiState {
         val jobUis = jobs.map {
-            JobUi(it.job.id, it.job.name, it.job.color, it.job.currency, it.rules.toDomain().weeklyOtAfter)
+            JobUi(it.job.id, it.job.name.sentenceCase(), it.job.color, it.job.currency, it.rules.toDomain().weeklyOtAfter)
         }
         val selectedId = running?.shift?.jobId
             ?: s.selectedJobId?.takeIf { id -> jobUis.any { it.id == id } }
@@ -211,7 +212,7 @@ class ClockViewModel @Inject constructor(
             val s = settings.first()
             try {
                 val id = repo.addJob(
-                    name.trim(), color, rate, currency, preset, unlimitedJobs = s.removeAds,
+                    name.sentenceCase(), color, rate, currency, preset, unlimitedJobs = s.removeAds,
                     scheduledMinPerWeek = scheduledHours?.multiply(BigDecimal(60))?.toInt(),
                 )
                 settingsRepo.setSelectedJob(id)
