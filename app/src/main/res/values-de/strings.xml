@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Stempeluhr</string>
+    <string name="tab_clock">Stempeln</string>
+    <string name="tab_timesheet">Stundenzettel</string>
+    <string name="tab_reports">Berichte</string>
+    <string name="tab_settings">Einstellungen</string>
+    <string name="pay_disclaimer">Lohnangaben sind Schätzungen und keine Rechts- oder Lohnabrechnungsberatung.</string>
+</resources>

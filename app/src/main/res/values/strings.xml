@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Time Card</string>
+    <string name="tab_clock">Clock</string>
+    <string name="tab_timesheet">Timesheet</string>
+    <string name="tab_reports">Reports</string>
+    <string name="tab_settings">Settings</string>
+    <string name="pay_disclaimer">Pay figures are estimates, not legal or payroll advice.</string>
+</resources>
