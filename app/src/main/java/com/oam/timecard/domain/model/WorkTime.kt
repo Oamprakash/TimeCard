@@ -17,6 +17,7 @@ data class WorkShift(
     val end: Instant?,
     val zone: ZoneId,
     val breaks: List<BreakSpan> = emptyList(),
+    val note: String? = null,
 ) {
     /** A shift counts toward the local date it started on (spec rule). */
     val workDate: LocalDate get() = start.atZone(zone).toLocalDate()

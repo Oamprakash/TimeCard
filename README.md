@@ -27,7 +27,11 @@ ui/clock        Clock tab: job chips, big Clock in/out button, break button, liv
 ui/timesheet    Week/month timesheet, day sheet (shifts, sick/holiday/leave per job)
 ui/shift        Add/edit shift: job, date, start/end (night shifts), breaks, note, delete
 ui/reports      Pay-period report per job, totals per currency, pay-period + week-start picker
-ui              Bottom-nav shell (Settings arrives in Sprint 5), shared formatting
+ui/settings     Remove ads, restore purchases, privacy options (rest of Settings in Sprint 5)
+export          Export model, CSV + XLSX writers (pure Kotlin), PDF renderer, exporter + share sheet
+ads             UMP consent, ads gate, banner/native views, interstitial (capped) + rewarded
+billing         Play Billing 8: one-time "remove_ads", acknowledge, restore, refunds
+ui              Bottom-nav shell, shared formatting
 ```
 
 ## Sprint status
@@ -35,7 +39,7 @@ ui              Bottom-nav shell (Settings arrives in Sprint 5), shared formatti
 - [x] Sprint 1: core engine (Room schema, presets, calculator, tests)
 - [x] Sprint 2: clock flow (Clock tab, clock in/out, breaks, auto-deduct, ongoing notification, reboot recovery)
 - [x] Sprint 3: timesheet and reports (week/month timesheet, add/edit shifts, day marks, pay-period report per job)
-- [ ] Sprint 4: export and monetization
+- [x] Sprint 4: export and monetization (PDF/CSV/Excel, UMP consent, AdMob with caps, Remove ads)
 - [ ] Sprint 5: polish and ship
 
 ## Clock flow (Sprint 2)
@@ -56,6 +60,9 @@ ui              Bottom-nav shell (Settings arrives in Sprint 5), shared formatti
 6. With the Germany preset, work past 6 h without a break. The "Break rule not met" warning should appear.
 7. Timesheet: add a 22:00–06:00 shift with a 02:00–02:30 break. It should show 7h 30m on the start day.
 8. Mark a day as sick and check the Reports tab: paid leave is added to gross pay, but not to overtime.
+9. Reports → CSV opens the share sheet. PDF and Excel first show the "watch a video" prompt, then the test ad, then share. Open the .xlsx in Google Sheets.
+10. Save a manual edit twice within 5 minutes. At most one interstitial should appear. Clocking in or out never shows an ad.
+11. Settings → Remove ads with a license tester account. All ads disappear, a 4th job can be added, and PDF exports without a prompt.
 
 ## Timesheet and reports (Sprint 3)
 
@@ -67,6 +74,38 @@ ui              Bottom-nav shell (Settings arrives in Sprint 5), shared formatti
 - **Scheduled hours** are an optional per-job weekly figure. Ranges that aren't a full week (months, pay periods) are pro-rated by the number of days.
 - **Reports** show one card per job, with each job's own overtime rules. Totals are added up per currency.
 - **Schema note:** `jobs.scheduledMinPerWeek` was added while the database is still at version 1, before release. Uninstall any earlier debug build before installing this one.
+
+## Export and monetization (Sprint 4)
+
+- **Exports** cover one pay period across all jobs, in two parts: a shifts sheet (one row per shift plus sick/holiday/leave rows) and a summary sheet (hours and gross pay per job, with totals per currency). Hours are decimal (7.50).
+  - **CSV:** free. RFC 4180 with a UTF-8 BOM. On German-locale devices it uses `;` and decimal commas so Excel opens it correctly. Cells starting with `= + - @` are neutralised to prevent formula injection.
+  - **Excel (.xlsx):** built by a small writer with no dependencies (`XlsxWriter`) instead of fastexcel. It writes real dates and numbers, a bold, frozen header row and two sheets, and has been checked with openpyxl.
+  - **PDF:** Android `PdfDocument` on A4. The table header repeats on each page, and the pay disclaimer is at the end.
+  - Files go to `cache/exports` (only the latest is kept) and are shared through a `FileProvider` with the Android share sheet.
+- **Consent:** the Google UMP SDK runs on every start. Ads are requested and the Mobile Ads SDK is initialised only once `canRequestAds()` is true. If the region requires it, Settings shows "Privacy options".
+- **Ads**, following the spec's placement table. They are all off when consent hasn't been given or Remove ads is owned.
+  - Clock tab: an adaptive banner below everything, hidden while a dialog is open.
+  - Timesheet: one native row after every 10th day with entries.
+  - Reports: a banner at the bottom.
+  - PDF/Excel export: one rewarded ad, which the user always opts into through a prompt. If no ad loads (offline, no fill), the export still happens.
+  - After saving a manual edit: an interstitial, at most 1 per 5 minutes and 2 per day (`InterstitialPolicy`).
+  - Never on clock in/out, the notification or its actions.
+- **Remove ads:** a one-time product with the ID `remove_ads`. It's acknowledged, restored on every start (which also removes the unlock after a refund), and unlocks no ads, unlimited jobs and free PDF/Excel export.
+
+### Before release
+
+1. AdMob: create the app plus banner, native, rewarded and interstitial units. Put the IDs in `~/.gradle/gradle.properties`, not in the repo:
+   ```
+   ADMOB_APP_ID=ca-app-pub-xxxxxxxx~yyyyyyyy
+   ADMOB_BANNER_ID=ca-app-pub-xxxxxxxx/1111111111
+   ADMOB_NATIVE_ID=ca-app-pub-xxxxxxxx/2222222222
+   ADMOB_REWARDED_ID=ca-app-pub-xxxxxxxx/3333333333
+   ADMOB_INTERSTITIAL_ID=ca-app-pub-xxxxxxxx/4444444444
+   ```
+   Debug builds always use Google's test IDs. A release build without these properties falls back to the test IDs and prints a warning.
+2. AdMob → Privacy & messaging: publish a GDPR message and a US state regulations message. UMP shows them.
+3. Play Console: create the in-app product `remove_ads` at $2.99 / €2.99 and add license testers.
+4. Data safety form: the app itself collects nothing, but the AdMob SDK collects device or other IDs for advertising.
 
 ## Engine rules (as implemented)
 

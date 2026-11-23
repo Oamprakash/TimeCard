@@ -43,3 +43,13 @@ fun formatDateMedium(date: LocalDate): String =
 
 fun formatMonth(date: LocalDate): String =
     DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()).format(date)
+
+/** The Activity hosting this Compose tree (needed for ads, consent and billing sheets). */
+fun android.content.Context.findActivity(): android.app.Activity? {
+    var c: android.content.Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
+}

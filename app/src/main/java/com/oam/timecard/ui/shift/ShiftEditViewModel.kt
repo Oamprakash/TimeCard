@@ -3,6 +3,7 @@ package com.oam.timecard.ui.shift
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.oam.timecard.ads.InterstitialManager
 import com.oam.timecard.clock.ClockController
 import com.oam.timecard.data.repository.SaveShiftResult
 import com.oam.timecard.data.repository.TimeCardRepository
@@ -57,6 +58,7 @@ class ShiftEditViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val controller: ClockController,
     private val clock: Clock,
+    private val interstitial: InterstitialManager,
 ) : ViewModel() {
 
     companion object {
@@ -70,11 +72,15 @@ class ShiftEditViewModel @Inject constructor(
     private val _state = MutableStateFlow(ShiftEditUiState())
     val state: StateFlow<ShiftEditUiState> = _state.asStateFlow()
 
-    /** One-shot: the screen closes when this emits. */
-    private val _done = Channel<Unit>(Channel.CONFLATED)
+    /** One-shot: the screen closes when this emits; true = a manual edit was saved. */
+    private val _done = Channel<Boolean>(Channel.CONFLATED)
     val done = _done.receiveAsFlow()
 
+    /** Capped (1 per 5 min, 2 per day) and only after saving a manual edit. Returns when the ad closes. */
+    suspend fun showInterstitialAfterSave(activity: android.app.Activity) = interstitial.maybeShow(activity)
+
     init {
+        interstitial.preload()
         viewModelScope.launch {
             val jobs = repo.activeJobs.first().map { it.toLabel() }
             val existing = shiftId?.let { repo.getShift(it) }
@@ -146,11 +152,10 @@ class ShiftEditViewModel @Inject constructor(
             when (val result = repo.saveShift(s.toDraft())) {
                 is SaveShiftResult.Saved -> {
                     controller.sync() // editing the running shift's start moves the notification timer
-                    // Sprint 4: capped interstitial after a manual edit goes here.
-                    _done.trySend(Unit)
+                    _done.trySend(true)
                 }
                 is SaveShiftResult.Invalid -> _state.update { it.copy(saving = false, errors = result.errors) }
-                SaveShiftResult.NotFound -> _done.trySend(Unit)
+                SaveShiftResult.NotFound -> _done.trySend(false)
             }
         }
     }
@@ -160,7 +165,7 @@ class ShiftEditViewModel @Inject constructor(
         viewModelScope.launch {
             repo.deleteShift(id)
             controller.sync() // deleting the running shift removes the notification
-            _done.trySend(Unit)
+            _done.trySend(false)
         }
     }
 

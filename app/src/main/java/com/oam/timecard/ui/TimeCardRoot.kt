@@ -1,8 +1,6 @@
 package com.oam.timecard.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -17,7 +15,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -33,9 +30,10 @@ import com.oam.timecard.ui.clock.ClockScreen
 import com.oam.timecard.ui.reports.ReportsScreen
 import com.oam.timecard.ui.shift.ShiftEditScreen
 import com.oam.timecard.ui.shift.ShiftEditViewModel
+import com.oam.timecard.ui.settings.SettingsScreen
 import com.oam.timecard.ui.timesheet.TimesheetScreen
 
-/** Navigation shell. Settings arrives in Sprint 5. */
+/** Navigation shell. */
 private enum class Tab(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     Clock("clock", R.string.tab_clock, Icons.Filled.PlayArrow),
     Timesheet("timesheet", R.string.tab_timesheet, Icons.Filled.DateRange),
@@ -81,7 +79,7 @@ fun TimeCardRoot() {
                     )
                 }
                 composable(Tab.Reports.route) { ReportsScreen() }
-                composable(Tab.Settings.route) { Placeholder(stringResource(Tab.Settings.label)) }
+                composable(Tab.Settings.route) { SettingsScreen() }
                 composable(
                     route = "$SHIFT_ROUTE?${ShiftEditViewModel.ARG_ID}={${ShiftEditViewModel.ARG_ID}}" +
                         "&${ShiftEditViewModel.ARG_DATE}={${ShiftEditViewModel.ARG_DATE}}",
@@ -95,9 +93,4 @@ fun TimeCardRoot() {
             }
         }
     }
-}
-
-@Composable
-private fun Placeholder(title: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(title) }
 }

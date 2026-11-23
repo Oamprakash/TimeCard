@@ -57,6 +57,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oam.timecard.R
+import com.oam.timecard.ads.AdBanner
 import com.oam.timecard.ui.formatHm
 import com.oam.timecard.ui.formatMoney
 import com.oam.timecard.domain.engine.DurationParts
@@ -117,6 +118,7 @@ fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
                 onClockIn = onClockIn,
                 onClockOut = viewModel::clockOut,
                 onToggleBreak = viewModel::toggleBreak,
+                showBanner = !showAddJob,
             )
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
@@ -149,6 +151,7 @@ private fun ClockDashboard(
     onClockIn: () -> Unit,
     onClockOut: () -> Unit,
     onToggleBreak: () -> Unit,
+    showBanner: Boolean,
 ) {
     val running = state.running
     Column(
@@ -217,7 +220,8 @@ private fun ClockDashboard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // Sprint 4: adaptive banner goes here, below everything, hidden while a dialog is open.
+        // Below everything, so it can never overlap the clock button; hidden while a dialog is open.
+        AdBanner(visible = showBanner)
     }
 }
 
