@@ -60,6 +60,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.oamsapps.punchd.ui.theme.selectorContainerColor
 import com.oamsapps.punchd.R
@@ -129,7 +131,9 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
 
             Text(stringResource(R.string.color), style = MaterialTheme.typography.titleSmall)
             Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.SpaceBetween) {
-                JOB_COLORS.forEach { c -> ColorSwatch(c, selected = c == s.color) { viewModel.edit { copy(color = c) } } }
+                JOB_COLORS.forEachIndexed { i, c ->
+                    ColorSwatch(c, stringResource(JOB_COLOR_NAMES[i]), selected = c == s.color) { viewModel.edit { copy(color = c) } }
+                }
             }
 
             Spacer(Modifier.height(4.dp))
@@ -206,15 +210,22 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
     }
 }
 
+/** TalkBack names for [JOB_COLORS], same order. */
+private val JOB_COLOR_NAMES = listOf(
+    R.string.color_blue, R.string.color_green, R.string.color_orange, R.string.color_purple,
+    R.string.color_red, R.string.color_teal, R.string.color_brown, R.string.color_blue_grey,
+)
+
 /** 36dp colour circle; the selected one gets a ✓ and an outer ring. */
 @Composable
-private fun ColorSwatch(color: Int, selected: Boolean, onClick: () -> Unit) {
+private fun ColorSwatch(color: Int, name: String, selected: Boolean, onClick: () -> Unit) {
     val ring = MaterialTheme.colorScheme.onSurface
     Box(
         Modifier.size(36.dp).clip(CircleShape)
             .then(if (selected) Modifier.border(2.dp, ring, CircleShape).padding(4.dp) else Modifier)
             .clip(CircleShape).background(Color(color))
-            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .semantics { contentDescription = name },
         contentAlignment = Alignment.Center,
     ) {
         if (selected) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))

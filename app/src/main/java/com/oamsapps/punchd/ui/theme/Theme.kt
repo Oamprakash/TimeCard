@@ -6,7 +6,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * One brand palette: emerald for the main action, soft mint for selected states (chips, nav pill,
@@ -81,9 +83,23 @@ private val Dark = darkColorScheme(
     outlineVariant = Color(0xFF3F4940),
 )
 
+/**
+ * Two green tints on top of Material's scheme, used everywhere instead of ad-hoc alphas:
+ * [selected] for a chosen control (chips, radio cards, selectors), [highlight] for a row or
+ * card that should stand out (Today, the All jobs total, live summaries).
+ */
+@Immutable
+data class PunchdTints(val selected: Color, val highlight: Color)
+
+private val LightTints = PunchdTints(selected = Color(0xFFE8F3EC), highlight = Color(0xFFDDF0E3))
+private val DarkTints = PunchdTints(selected = Color(0xFF1F3326), highlight = Color(0xFF1C3A26))
+private val LocalTints = staticCompositionLocalOf { LightTints }
+
 @Composable
 fun PunchdTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (dark) Dark else Light, content = content)
+    CompositionLocalProvider(LocalTints provides if (dark) DarkTints else LightTints) {
+        MaterialTheme(colorScheme = if (dark) Dark else Light, content = content)
+    }
 }
 
 /** Colour of the big button: emerald to clock in, red to clock out. */
@@ -93,7 +109,10 @@ fun clockInColor(): Color = MaterialTheme.colorScheme.primary
 @Composable
 fun clockOutColor(): Color = MaterialTheme.colorScheme.error
 
-/** Light mint fill for selector chips ("Biweekly ⌄", "All jobs ⌄") so they read as tappable controls. */
+/** Fill for selected / selector controls ("Biweekly ⌄", a chosen chip or radio card). */
 @Composable
-fun selectorContainerColor(): Color =
-    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF1F3326) else Color(0xFFE8F3EC)
+fun selectorContainerColor(): Color = LocalTints.current.selected
+
+/** Fill for highlighted rows and cards (Today, All jobs total, live summaries). */
+@Composable
+fun highlightContainerColor(): Color = LocalTints.current.highlight

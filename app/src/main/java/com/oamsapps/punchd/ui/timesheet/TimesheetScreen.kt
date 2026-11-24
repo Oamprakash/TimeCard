@@ -58,7 +58,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.oamsapps.punchd.domain.engine.DurationParts
 import com.oamsapps.punchd.ui.HoursProgress
-import com.oamsapps.punchd.ui.PayDisclaimer
 import com.oamsapps.punchd.ui.SummaryRow
 import com.oamsapps.punchd.ui.formatMoney
 import com.oamsapps.punchd.ui.theme.clockOutColor
@@ -249,8 +248,6 @@ private fun TotalsCard(state: TimesheetUiState, ts: Timesheet) {
                         formatMoney(p.amount, p.currency),
                     )
                 }
-                Spacer(Modifier.height(12.dp))
-                PayDisclaimer()
             }
         }
     }
@@ -269,7 +266,7 @@ private fun DayRow(day: TimesheetDay, isToday: Boolean, state: TimesheetUiState,
             .fillMaxWidth()
             .padding(vertical = 2.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isToday) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else Color.Transparent)
+            .background(if (isToday) com.oamsapps.punchd.ui.theme.highlightContainerColor() else Color.Transparent)
             .clickable(onClickLabel = stringResource(R.string.open_day), onClick = onClick)
             .heightIn(min = 56.dp)
             .padding(horizontal = 12.dp, vertical = 12.dp),

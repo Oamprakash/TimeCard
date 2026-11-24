@@ -19,12 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
@@ -47,6 +45,25 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.view.HapticFeedbackConstants
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import com.oamsapps.punchd.ui.theme.selectorContainerColor
 import com.oamsapps.punchd.R
 import androidx.compose.material3.HorizontalDivider
 import com.oamsapps.punchd.ui.theme.clockInColor
@@ -56,7 +73,6 @@ import com.oamsapps.punchd.ui.ClockSkeleton
 import com.oamsapps.punchd.ui.EmptyState
 import com.oamsapps.punchd.ui.ErrorState
 import com.oamsapps.punchd.ui.HoursProgress
-import com.oamsapps.punchd.ui.PayDisclaimer
 import com.oamsapps.punchd.ui.SummaryRow
 import com.oamsapps.punchd.ui.formatHm
 import com.oamsapps.punchd.ui.formatMoney
@@ -137,26 +153,21 @@ private fun ClockDashboard(
     showBanner: Boolean,
 ) {
     val running = state.running
+    // A firm tick confirms a punch without looking at the screen.
+    val view = LocalView.current
+    fun buzz() {
+        view.performHapticFeedback(
+            if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY
+        )
+    }
     // Content scrolls; the banner is anchored at the bottom, right above the navigation bar.
     Column(Modifier.fillMaxSize()) {
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Job selector — locked while clocked in.
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                state.jobs.forEach { job ->
-                    FilterChip(
-                        selected = job.id == state.selectedJobId,
-                        onClick = { onSelectJob(job.id) },
-                        enabled = running == null || job.id == state.selectedJobId,
-                        label = { Text(job.name) },
-                        leadingIcon = { Box(Modifier.size(10.dp).background(Color(job.color), CircleShape)) },
-                    )
-                }
-                if (running == null) AssistChip(onClick = onAddJob, label = { Text("+ " + stringResource(R.string.add_job)) })
-            }
-
+            // Job selector: "● Primary job ⌄" (scales to any number of jobs). Locked while clocked in.
+            JobSelector(state, locked = running != null, onSelectJob = onSelectJob, onAddJob = onAddJob)
             Spacer(Modifier.height(28.dp))
 
             // Status + live timer. Tabular figures keep the digits from jittering; no gaps around the colons.
@@ -170,10 +181,14 @@ private fun ClockDashboard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(4.dp))
+            // 56sp, but never wider than the screen at large font scales ("10:42:17" ≈ 5.2 em with tnum).
+            val density = LocalDensity.current
+            val maxTimerSp = with(density) { (LocalConfiguration.current.screenWidthDp.dp - 32.dp).div(5.2f).toSp() }
             Text(
                 text = DurationParts.clock(running?.worked ?: Duration.ZERO),
+                maxLines = 1,
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 56.sp,
+                    fontSize = if (maxTimerSp < 56.sp) maxTimerSp else 56.sp,
                     fontWeight = FontWeight.Medium,
                     fontFeatureSettings = "tnum",
                     letterSpacing = (-0.5).sp,
@@ -188,12 +203,12 @@ private fun ClockDashboard(
             ClockButton(
                 clockedIn = running != null,
                 enabled = !busy && state.selectedJobId != null,
-                onClick = if (running == null) onClockIn else onClockOut,
+                onClick = { buzz(); if (running == null) onClockIn() else onClockOut() },
             )
 
             if (running != null) {
                 Spacer(Modifier.height(20.dp))
-                OutlinedButton(onClick = onToggleBreak, enabled = !busy, modifier = Modifier.fillMaxWidth(0.7f).height(52.dp)) {
+                OutlinedButton(onClick = { view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY); onToggleBreak() }, enabled = !busy, modifier = Modifier.fillMaxWidth(0.7f).height(52.dp)) {
                     Text(stringResource(if (running.onBreak) R.string.end_break else R.string.start_break))
                 }
             }
@@ -209,6 +224,55 @@ private fun ClockDashboard(
  * The big round button: a soft halo ring behind it and real elevation, so it reads as tappable.
  * Nothing (no ad, no dialog) is ever placed before this tap.
  */
+@Composable
+private fun JobSelector(state: ClockUiState, locked: Boolean, onSelectJob: (Long) -> Unit, onAddJob: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val job = state.selectedJob
+    val lockedLabel = stringResource(R.string.locked)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box {
+            AssistChip(
+                onClick = { if (!locked) open = true },
+                label = { Text(job?.name ?: stringResource(R.string.choose_job), maxLines = 1) },
+                leadingIcon = job?.let { j -> { Box(Modifier.size(10.dp).background(Color(j.color), CircleShape)) } },
+                trailingIcon = {
+                    Icon(
+                        if (locked) Icons.Filled.Lock else Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(containerColor = selectorContainerColor()),
+                border = null,
+                modifier = Modifier.semantics {
+                    contentDescription = job?.name.orEmpty()
+                    if (locked) stateDescription = lockedLabel
+                },
+            )
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                state.jobs.forEach { j ->
+                    DropdownMenuItem(
+                        text = { Text(j.name) },
+                        leadingIcon = { Box(Modifier.size(12.dp).background(Color(j.color), CircleShape)) },
+                        trailingIcon = if (j.id == state.selectedJobId) { { Icon(Icons.Filled.Check, null) } } else null,
+                        onClick = { onSelectJob(j.id); open = false },
+                    )
+                }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.add_job)) },
+                    leadingIcon = { Icon(Icons.Filled.Add, null) },
+                    onClick = { open = false; onAddJob() },
+                )
+            }
+        }
+        if (locked && state.jobs.size > 1) {
+            Text(stringResource(R.string.clock_out_to_switch), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
 @Composable
 private fun ClockButton(clockedIn: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val color = if (clockedIn) clockOutColor() else clockInColor()
@@ -270,9 +334,6 @@ private fun TotalsCard(state: ClockUiState) {
             Spacer(Modifier.height(16.dp))
             SummaryRow(stringResource(R.string.est_pay), formatMoney(state.weekPay, state.currency))
 
-            // The disclaimer lives with the number it qualifies, quietly.
-            Spacer(Modifier.height(12.dp))
-            PayDisclaimer()
         }
     }
 }

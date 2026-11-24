@@ -250,4 +250,16 @@
     <string name="err_delete_running">Du bist in diesem Job eingestempelt. Stempel erst aus und lösche ihn dann.</string>
     <string name="job">Job</string>
     <string name="clock_no_jobs">Füge einen Job hinzu, um deine Stunden zu erfassen.</string>
+    <string name="onboarding_step">Schritt %1$d von %2$d</string>
+    <string name="choose_job">Job wählen</string>
+    <string name="clock_out_to_switch">Zum Wechseln erst ausstempeln</string>
+    <string name="locked">Gesperrt</string>
+    <string name="color_blue">Blau</string>
+    <string name="color_green">Grün</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_purple">Lila</string>
+    <string name="color_red">Rot</string>
+    <string name="color_teal">Petrol</string>
+    <string name="color_brown">Braun</string>
+    <string name="color_blue_grey">Blaugrau</string>
 </resources>

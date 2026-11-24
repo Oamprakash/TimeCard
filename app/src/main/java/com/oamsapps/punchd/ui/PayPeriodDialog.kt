@@ -128,7 +128,7 @@ private fun PayPeriodSheetContent(
 
         Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PayPeriodType.entries.forEach { t ->
-                FrequencyOption(
+                RadioCard(
                     label = periodTypeLabel(t),
                     detail = if (t == PayPeriodType.SEMI_MONTHLY) stringResource(R.string.period_semi_monthly_detail) else null,
                     selected = type == t,
@@ -208,9 +208,13 @@ private fun PayPeriodSheetContent(
     }
 }
 
-/** One frequency choice: outlined card with a trailing radio; selected = mint fill + brand border. */
+/**
+ * Single choice that needs a word of explanation: outlined card with a trailing radio;
+ * selected = mint fill + brand border. Used for pay frequency and onboarding's country.
+ * Wrap a set of these in a Column with Modifier.selectableGroup().
+ */
 @Composable
-private fun FrequencyOption(label: String, detail: String?, selected: Boolean, onClick: () -> Unit) {
+fun RadioCard(label: String, detail: String?, selected: Boolean, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Surface(
         shape = RoundedCornerShape(12.dp),

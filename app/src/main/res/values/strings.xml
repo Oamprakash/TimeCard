@@ -250,4 +250,16 @@
     <string name="err_delete_running">You\'re clocked in to this job. Clock out first, then delete it.</string>
     <string name="job">Job</string>
     <string name="clock_no_jobs">Add a job to start tracking your hours.</string>
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+    <string name="choose_job">Choose a job</string>
+    <string name="clock_out_to_switch">Clock out to switch jobs</string>
+    <string name="locked">Locked</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_green">Green</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_red">Red</string>
+    <string name="color_teal">Teal</string>
+    <string name="color_brown">Brown</string>
+    <string name="color_blue_grey">Blue grey</string>
 </resources>

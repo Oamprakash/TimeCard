@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +41,8 @@ import com.oamsapps.punchd.domain.engine.PayPeriodType
 import com.oamsapps.punchd.domain.model.PresetKind
 import com.oamsapps.punchd.domain.model.WorkCountry
 import com.oamsapps.punchd.ui.PayPeriodDialog
+import com.oamsapps.punchd.ui.RadioCard
+import androidx.compose.foundation.selection.selectableGroup
 import com.oamsapps.punchd.ui.formatDateMedium
 import com.oamsapps.punchd.ui.periodTypeLabel
 import java.time.format.TextStyle
@@ -61,6 +62,13 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (s.step != OnboardingStep.DONE) {
+                Text(
+                    stringResource(R.string.onboarding_step, s.step.ordinal + 1, OnboardingStep.entries.size - 1),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             when (s.step) {
                 OnboardingStep.COUNTRY -> CountryStep(s, viewModel)
                 OnboardingStep.JOB -> JobStep(s, viewModel)
@@ -86,13 +94,15 @@ private fun CountryStep(s: OnboardingState, vm: OnboardingViewModel) {
     Text(stringResource(R.string.onboarding_welcome), style = MaterialTheme.typography.headlineMedium)
     Text(stringResource(R.string.onboarding_welcome_text))
     Text(stringResource(R.string.onboarding_where), style = MaterialTheme.typography.titleMedium)
-    listOf(
-        WorkCountry.US to R.string.country_us,
-        WorkCountry.CALIFORNIA to R.string.country_california,
-        WorkCountry.GERMANY to R.string.country_germany,
-        WorkCountry.OTHER to R.string.country_other,
-    ).forEach { (c, label) ->
-        FilterChip(selected = s.country == c, onClick = { vm.pickCountry(c) }, label = { Text(stringResource(label)) })
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        listOf(
+            WorkCountry.US to R.string.country_us,
+            WorkCountry.CALIFORNIA to R.string.country_california,
+            WorkCountry.GERMANY to R.string.country_germany,
+            WorkCountry.OTHER to R.string.country_other,
+        ).forEach { (c, label) ->
+            RadioCard(label = stringResource(label), detail = null, selected = s.country == c, onClick = { vm.pickCountry(c) })
+        }
     }
     Card(Modifier.fillMaxWidth()) {
         Text(
@@ -108,7 +118,6 @@ private fun CountryStep(s: OnboardingState, vm: OnboardingViewModel) {
             style = MaterialTheme.typography.bodyMedium,
         )
     }
-    Text(stringResource(R.string.pay_disclaimer), style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable

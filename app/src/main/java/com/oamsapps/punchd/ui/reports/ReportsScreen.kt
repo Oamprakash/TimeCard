@@ -314,7 +314,7 @@ private fun TotalsCard(state: ReportsUiState) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)),
+        colors = CardDefaults.outlinedCardColors(containerColor = com.oamsapps.punchd.ui.theme.highlightContainerColor()),
     ) {
         Column(Modifier.padding(20.dp)) {
             Text(stringResource(R.string.all_jobs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

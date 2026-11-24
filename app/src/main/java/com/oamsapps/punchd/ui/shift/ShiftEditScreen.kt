@@ -59,7 +59,6 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Surface
 import com.oamsapps.punchd.ui.JobLabel
 import com.oamsapps.punchd.ui.formatDateWithWeekday
-import com.oamsapps.punchd.ui.theme.selectorContainerColor
 import java.time.Duration
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.domain.engine.ShiftError
@@ -279,7 +278,7 @@ private fun JobDropdown(jobs: List<JobLabel>, selectedId: Long?, onSelect: (Long
 /** "7:30 worked · 30 min break", tinted, right under the times so the result is visible while editing. */
 @Composable
 private fun WorkedSummary(p: WorkedPreview) {
-    Surface(color = selectorContainerColor(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+    Surface(color = com.oamsapps.punchd.ui.theme.highlightContainerColor(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.day_worked, formatHm(p.worked)),
