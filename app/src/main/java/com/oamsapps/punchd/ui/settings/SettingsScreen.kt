@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
@@ -136,31 +137,37 @@ fun SettingsScreen(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Jobs & rules: tappable rows (56dp, chevron, dividers) + "+ Add job"
+            // Jobs & rules: compact tappable rows (48dp touch height, chevron, dividers between) + "+ Add job"
             Section(stringResource(R.string.settings_jobs)) {
-                s.jobs.forEach { j ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(8.dp))
-                            .clickable(onClickLabel = stringResource(R.string.edit_job)) { onEditJob(j.label.id) },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        JobDot(j.label.color, 12.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text(j.label.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        if (j.archived) {
-                            Text(stringResource(R.string.archived), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.width(4.dp))
+                // Own column so the Section's 6dp spacing doesn't pad around every row and divider.
+                Column {
+                    s.jobs.forEachIndexed { i, j ->
+                        if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp))
+                                .clickable(onClickLabel = stringResource(R.string.edit_job)) { onEditJob(j.label.id) },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            JobDot(j.label.color, 10.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text(j.label.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            if (j.archived) {
+                                Text(stringResource(R.string.archived), style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
-                Spacer(Modifier.height(6.dp))
-                OutlinedButton(onClick = onAddJob) {
+                OutlinedButton(
+                    onClick = onAddJob,
+                    contentPadding = PaddingValues(start = 12.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+                    modifier = Modifier.heightIn(min = 36.dp),
+                ) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.add_job))
                 }
             }
@@ -330,7 +337,7 @@ private fun Section(
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
                 icon?.let { it(); Spacer(Modifier.width(10.dp)) }
                 Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 action?.invoke()
