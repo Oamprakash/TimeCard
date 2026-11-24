@@ -51,12 +51,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableStateOf
@@ -65,14 +62,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import com.oamsapps.punchd.ui.theme.selectorContainerColor
-import com.oamsapps.punchd.util.currencySymbol
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.ui.FormSkeleton
 import com.oamsapps.punchd.domain.model.PresetKind
 import androidx.compose.foundation.background
-
-/** Common currencies first; any other valid code the job already uses is added to the list. */
-private val CURRENCIES = listOf("USD", "EUR", "GBP", "INR", "CAD", "AUD", "NZD", "CHF", "JPY", "SGD", "AED", "ZAR", "MXN", "BRL", "SEK", "NOK", "DKK", "PLN")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +79,12 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
             TopAppBar(
                 title = { Text(stringResource(if (s.isNew) R.string.add_job else R.string.edit_job)) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
+                // Destructive action out of the thumb zone, away from Save (same as Edit shift).
+                actions = {
+                    if (!s.isNew && !s.loading) IconButton(onClick = { confirmDelete = true }) {
+                        Icon(Icons.Filled.Delete, stringResource(R.string.delete_job), tint = MaterialTheme.colorScheme.error)
+                    }
+                },
             )
         },
         // Actions pinned to the bottom so Save is always reachable; errors show right above them.
@@ -97,22 +96,11 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
                             Text(errorText(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                             Spacer(Modifier.height(8.dp))
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (!s.isNew) {
-                                OutlinedButton(
-                                    onClick = { confirmDelete = true },
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                ) {
-                                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.delete_job), maxLines = 1)
-                                }
-                            }
-                            Button(onClick = viewModel::save, enabled = !s.saving, modifier = Modifier.weight(1f).height(48.dp)) {
-                                Text(stringResource(R.string.save))
-                            }
-                        }
+                        Button(
+                            onClick = viewModel::save,
+                            enabled = !s.saving && !s.limitReached,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                        ) { Text(stringResource(R.string.save)) }
                     }
                 }
             }
@@ -126,17 +114,15 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (s.limitReached) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                    Text(stringResource(R.string.job_limit), color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+                }
+            }
             Field(s.name, { v -> viewModel.edit { copy(name = v) } }, stringResource(R.string.job_name), numeric = false)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
-                OutlinedTextField(
-                    value = s.rate,
-                    onValueChange = { v -> viewModel.edit { copy(rate = v) } },
-                    label = { Text(stringResource(R.string.hourly_rate_plain)) },
-                    prefix = { Text(currencySymbol(s.currency) + " ") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1.8f),
-                )
+                RateField(s.rate, s.currency, { v -> viewModel.edit { copy(rate = v) } }, Modifier.weight(1.8f))
                 CurrencyField(s.currency, { c -> viewModel.edit { copy(currency = c) } }, Modifier.weight(1f))
             }
             Field(s.scheduledHours, { v -> viewModel.edit { copy(scheduledHours = v) } }, stringResource(R.string.scheduled_hours_optional))
@@ -217,35 +203,6 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
-    }
-}
-
-/** Currency as an exposed dropdown ("USD ▾"); names in the menu, code in the field. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CurrencyField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    var open by remember { mutableStateOf(false) }
-    val options = remember(value) { if (value in CURRENCIES || value.isBlank()) CURRENCIES else listOf(value) + CURRENCIES }
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(stringResource(R.string.currency)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
-            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-        )
-        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            options.forEach { code ->
-                val name = remember(code) { runCatching { java.util.Currency.getInstance(code).displayName }.getOrDefault(code) }
-                DropdownMenuItem(
-                    text = { Text("$code · $name", maxLines = 1) },
-                    onClick = { onChange(code); open = false },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                )
-            }
-        }
     }
 }
 

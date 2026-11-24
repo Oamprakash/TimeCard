@@ -6,7 +6,6 @@ import com.oamsapps.punchd.clock.ClockController
 import com.oamsapps.punchd.data.db.JobWithRules
 import com.oamsapps.punchd.data.db.ShiftWithBreaks
 import com.oamsapps.punchd.data.db.toDomain
-import com.oamsapps.punchd.data.repository.JobLimitReachedException
 import com.oamsapps.punchd.data.repository.TimeCardRepository
 import com.oamsapps.punchd.data.settings.AppSettings
 import com.oamsapps.punchd.data.settings.SettingsRepository
@@ -14,7 +13,6 @@ import com.oamsapps.punchd.domain.engine.HoursCalculator
 import com.oamsapps.punchd.domain.engine.RunningSnapshot
 import com.oamsapps.punchd.domain.engine.RunningState
 import com.oamsapps.punchd.domain.model.DayFlag
-import com.oamsapps.punchd.domain.model.PresetKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.time.Clock
@@ -38,7 +36,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -71,7 +68,7 @@ data class ClockUiState(
     val selectedJob: JobUi? get() = jobs.firstOrNull { it.id == selectedJobId }
 }
 
-enum class ClockMessage { JOB_LIMIT, INVALID_JOB, SAVE_FAILED, PUNCH_FAILED }
+enum class ClockMessage { SAVE_FAILED, PUNCH_FAILED }
 
 private data class WeekWindow(val from: LocalDate, val to: LocalDate)
 
@@ -197,33 +194,6 @@ class ClockViewModel @Inject constructor(
     /** Called after the notification permission dialog; posts the notification if it was granted. */
     fun onNotificationPermissionResult() {
         viewModelScope.launch { runCatching { controller.sync() } }
-    }
-
-    fun addJob(name: String, rateText: String, currency: String, preset: PresetKind, color: Int, scheduledText: String = "") {
-        val rate = rateText.trim().replace(',', '.').toBigDecimalOrNull()
-        val scheduledHours = scheduledText.trim().replace(',', '.').takeIf { it.isNotEmpty() }?.toBigDecimalOrNull()
-        val scheduledInvalid = scheduledText.isNotBlank() &&
-            (scheduledHours == null || scheduledHours.signum() < 0 || scheduledHours > BigDecimal(168))
-        if (name.isBlank() || rate == null || rate.signum() < 0 || scheduledInvalid) {
-            _messages.tryEmit(ClockMessage.INVALID_JOB)
-            return
-        }
-        viewModelScope.launch {
-            val s = settings.first()
-            try {
-                val id = repo.addJob(
-                    name.sentenceCase(), color, rate, currency, preset, unlimitedJobs = s.removeAds,
-                    scheduledMinPerWeek = scheduledHours?.multiply(BigDecimal(60))?.toInt(),
-                )
-                settingsRepo.setSelectedJob(id)
-            } catch (_: JobLimitReachedException) {
-                _messages.tryEmit(ClockMessage.JOB_LIMIT)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                _messages.tryEmit(ClockMessage.SAVE_FAILED)
-            }
-        }
     }
 
     /** Runs the punch that failed last time (snackbar "Retry"). */

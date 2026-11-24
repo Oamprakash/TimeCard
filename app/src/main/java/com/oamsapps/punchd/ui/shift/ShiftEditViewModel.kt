@@ -32,6 +32,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class WorkedPreview(val worked: Duration, val breaks: Duration)
+
 data class ShiftEditUiState(
     val loading: Boolean = true,
     val isNew: Boolean = true,
@@ -136,7 +138,8 @@ class ShiftEditViewModel @Inject constructor(
     }
 
     /** Worked time preview (breaks excluded); null while there is nothing to show. */
-    fun preview(s: ShiftEditUiState): Duration? {
+    /** Worked time and total breaks for the live summary under the times; null while running or incomplete. */
+    fun preview(s: ShiftEditUiState): WorkedPreview? {
         if (s.isRunning || s.jobId == null) return null
         val r = ShiftDrafts.resolve(s.toDraft(), ZoneId.systemDefault())
         val end = r.end ?: return null
@@ -144,7 +147,8 @@ class ShiftEditViewModel @Inject constructor(
         val breaks = HoursCalculator.breakTotal(
             r.breaks.map { com.oamsapps.punchd.domain.model.BreakSpan(it.start, it.end) }, r.start, end, end,
         )
-        return gross.minus(breaks).takeIf { !it.isNegative }
+        val worked = gross.minus(breaks).takeIf { !it.isNegative } ?: return null
+        return WorkedPreview(worked, breaks)
     }
 
     fun save() {

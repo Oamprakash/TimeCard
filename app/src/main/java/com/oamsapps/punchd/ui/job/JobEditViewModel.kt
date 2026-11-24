@@ -7,6 +7,7 @@ import com.oamsapps.punchd.clock.ClockController
 import com.oamsapps.punchd.data.db.JobEntity
 import com.oamsapps.punchd.data.db.RuleSetEntity
 import com.oamsapps.punchd.data.db.toNewRuleSetEntity
+import com.oamsapps.punchd.data.repository.FREE_JOB_LIMIT
 import com.oamsapps.punchd.data.repository.JobLimitReachedException
 import com.oamsapps.punchd.data.repository.TimeCardRepository
 import com.oamsapps.punchd.data.settings.SettingsRepository
@@ -51,6 +52,8 @@ data class JobEditState(
     val autoBreakAfterHours: String = "",
     val maxDailyHours: String = "",
     val archived: Boolean = false,
+    /** New job, free version, already at the job limit: the form explains and Save is off. */
+    val limitReached: Boolean = false,
     val error: JobFormError? = null,
     val saving: Boolean = false,
 )
@@ -63,9 +66,14 @@ class JobEditViewModel @Inject constructor(
     private val controller: ClockController,
 ) : ViewModel() {
 
-    companion object { const val ARG_ID = "id" }
+    companion object {
+        const val ARG_ID = "id"
+        /** Opened from the Clock tab: the new job becomes the selected one there. */
+        const val ARG_SELECT = "select"
+    }
 
     private val jobId: Long? = savedState.get<Long>(ARG_ID)?.takeIf { it > 0 }
+    private val selectAfterCreate: Boolean = savedState.get<Boolean>(ARG_SELECT) ?: false
     private var original: Pair<JobEntity, RuleSetEntity>? = null
 
     private val _state = MutableStateFlow(JobEditState())
@@ -89,8 +97,11 @@ class JobEditViewModel @Inject constructor(
                 val count = repo.allJobs.first().size
                 val currency = runCatching { Currency.getInstance(Locale.getDefault()).currencyCode }.getOrDefault("USD")
                 val preset = repo.allJobs.first().firstOrNull()?.rules?.presetKind ?: PresetKind.CUSTOM
+                // Tell free users about the job limit before they fill in the form, not after.
+                val atLimit = !settings.settings.first().removeAds && repo.activeJobs.first().size >= FREE_JOB_LIMIT
                 _state.value = fromRules(preset.toNewRuleSetEntity(), JobEditState(
                     loading = false, currency = currency, color = JOB_COLORS[count % JOB_COLORS.size],
+                    limitReached = atLimit,
                 ))
             }
         }
@@ -164,6 +175,7 @@ class JobEditViewModel @Inject constructor(
                     )
                     val created = repo.jobWithRules(id)!!
                     repo.updateJob(created.job, rules.copy(id = created.rules.id))
+                    if (selectAfterCreate) runCatching { settings.setSelectedJob(id) }
                 } else {
                     repo.updateJob(
                         orig.first.copy(

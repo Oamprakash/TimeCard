@@ -32,12 +32,7 @@
     <string name="first_job_title">Ersten Job hinzufügen</string>
     <string name="add_job">Job hinzufügen</string>
     <string name="job_name">Jobname</string>
-    <string name="hourly_rate">Stundenlohn (%1$s)</string>
     <string name="rules">Überstundenregeln</string>
-    <string name="preset_us">USA Bund (Überstunden ab 40 Std./Woche)</string>
-    <string name="preset_ca">Kalifornien (tägliche + wöchentliche Überstunden)</string>
-    <string name="preset_de">Deutschland (Pausen- und Höchstarbeitszeit-Warnungen)</string>
-    <string name="preset_custom">Keine / eigene</string>
     <string name="save">Speichern</string>
     <string name="cancel">Abbrechen</string>
     <string name="job_limit">Die kostenlose Version erlaubt 3 Jobs. Mit Pro kannst du mehr hinzufügen.</string>
@@ -100,7 +95,6 @@
     <string name="week">Woche</string>
     <string name="week_starts_on">Woche beginnt am</string>
     <string name="worked">Gearbeitet</string>
-    <string name="worked_preview">Gearbeitet: %1$s</string>
     <string name="worked_vs_scheduled">Ist / Soll</string>
     <string name="ad_badge">Anzeige</string>
     <string name="billing_unavailable">Käufe sind gerade nicht möglich. Prüfe deine Verbindung und Google Play und versuche es erneut.</string>
@@ -254,4 +248,6 @@
     <string name="delete_job_q">%1$s löschen?</string>
     <string name="delete_job_warning">Damit werden auch alle Schichten, Pausen und Abwesenheitstage gelöscht. Das lässt sich nicht rückgängig machen. Um den Verlauf zu behalten, archiviere den Job stattdessen.</string>
     <string name="err_delete_running">Du bist in diesem Job eingestempelt. Stempel erst aus und lösche ihn dann.</string>
+    <string name="job">Job</string>
+    <string name="clock_no_jobs">Füge einen Job hinzu, um deine Stunden zu erfassen.</string>
 </resources>

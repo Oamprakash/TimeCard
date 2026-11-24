@@ -32,12 +32,7 @@
     <string name="first_job_title">Add your first job</string>
     <string name="add_job">Add job</string>
     <string name="job_name">Job name</string>
-    <string name="hourly_rate">Hourly rate (%1$s)</string>
     <string name="rules">Overtime rules</string>
-    <string name="preset_us">US federal (OT after 40 h/week)</string>
-    <string name="preset_ca">California (daily + weekly OT)</string>
-    <string name="preset_de">Germany (break and max-hours warnings)</string>
-    <string name="preset_custom">None / custom</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="job_limit">The free version allows 3 jobs. Upgrade to Pro to add more.</string>
@@ -100,7 +95,6 @@
     <string name="week">Week</string>
     <string name="week_starts_on">Week starts on</string>
     <string name="worked">Worked</string>
-    <string name="worked_preview">Worked: %1$s</string>
     <string name="worked_vs_scheduled">Worked / scheduled</string>
     <string name="ad_badge">Ad</string>
     <string name="billing_unavailable">Purchases aren\'t available right now. Check your connection and Google Play, then try again.</string>
@@ -254,4 +248,6 @@
     <string name="delete_job_q">Delete %1$s?</string>
     <string name="delete_job_warning">This also deletes all its shifts, breaks and leave days. It can\'t be undone. To keep its history, archive the job instead.</string>
     <string name="err_delete_running">You\'re clocked in to this job. Clock out first, then delete it.</string>
+    <string name="job">Job</string>
+    <string name="clock_no_jobs">Add a job to start tracking your hours.</string>
 </resources>

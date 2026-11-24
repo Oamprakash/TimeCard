@@ -97,7 +97,7 @@ private fun MainTabs() {
             },
         ) { padding ->
             NavHost(nav, startDestination = Tab.Clock.route, modifier = Modifier.padding(padding)) {
-                composable(Tab.Clock.route) { ClockScreen() }
+                composable(Tab.Clock.route) { ClockScreen(onAddJob = { nav.navigate("$JOB_ROUTE?${JobEditViewModel.ARG_SELECT}=true") }) }
                 composable(Tab.Timesheet.route) {
                     TimesheetScreen(
                         onAddShift = { date -> nav.navigate("$SHIFT_ROUTE?${ShiftEditViewModel.ARG_DATE}=$date") },
@@ -112,8 +112,12 @@ private fun MainTabs() {
                     )
                 }
                 composable(
-                    route = "$JOB_ROUTE?${JobEditViewModel.ARG_ID}={${JobEditViewModel.ARG_ID}}",
-                    arguments = listOf(navArgument(JobEditViewModel.ARG_ID) { type = NavType.LongType; defaultValue = -1L }),
+                    route = "$JOB_ROUTE?${JobEditViewModel.ARG_ID}={${JobEditViewModel.ARG_ID}}" +
+                        "&${JobEditViewModel.ARG_SELECT}={${JobEditViewModel.ARG_SELECT}}",
+                    arguments = listOf(
+                        navArgument(JobEditViewModel.ARG_ID) { type = NavType.LongType; defaultValue = -1L },
+                        navArgument(JobEditViewModel.ARG_SELECT) { type = NavType.BoolType; defaultValue = false },
+                    ),
                 ) {
                     JobEditScreen(onClose = { nav.popBackStack() })
                 }

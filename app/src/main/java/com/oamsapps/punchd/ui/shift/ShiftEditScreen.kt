@@ -1,7 +1,6 @@
 package com.oamsapps.punchd.ui.shift
 
 import android.text.format.DateFormat
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,10 +44,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.Surface
+import com.oamsapps.punchd.ui.JobLabel
+import com.oamsapps.punchd.ui.formatDateWithWeekday
+import com.oamsapps.punchd.ui.theme.selectorContainerColor
+import java.time.Duration
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.domain.engine.ShiftError
 import com.oamsapps.punchd.ui.JobDot
-import com.oamsapps.punchd.ui.formatDateMedium
 import com.oamsapps.punchd.ui.formatHm
 import com.oamsapps.punchd.ui.FormSkeleton
 import com.oamsapps.punchd.ui.findActivity
@@ -83,11 +97,35 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
                     IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
-                    if (!s.isNew) IconButton(onClick = { confirmDelete = true }) {
-                        Icon(Icons.Filled.Delete, stringResource(R.string.delete))
+                    if (!s.isNew && !s.loading) IconButton(onClick = { confirmDelete = true }) {
+                        Icon(Icons.Filled.Delete, stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
                     }
                 },
             )
+        },
+        // Save pinned (always reachable above the keyboard); errors right above it.
+        bottomBar = {
+            if (!s.loading) {
+                Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
+                    Column(
+                        Modifier.navigationBarsPadding().imePadding().padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (s.saveFailed) {
+                            Text(stringResource(R.string.save_failed_try_again), color = MaterialTheme.colorScheme.error)
+                        }
+                        s.errors.forEach { e ->
+                            Text(errorText(e), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (s.saveFailed || s.errors.isNotEmpty()) Spacer(Modifier.height(4.dp))
+                        Button(
+                            onClick = viewModel::save,
+                            enabled = !s.saving && s.jobId != null,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                        ) { Text(stringResource(R.string.save)) }
+                    }
+                }
+            }
         },
     ) { padding ->
         if (s.loading) {
@@ -98,18 +136,9 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                s.jobs.forEach { job ->
-                    FilterChip(
-                        selected = job.id == s.jobId,
-                        onClick = { viewModel.setJob(job.id) },
-                        label = { Text(job.name) },
-                        leadingIcon = { JobDot(job.color) },
-                    )
-                }
-            }
+            if (s.jobs.size > 1) JobDropdown(s.jobs, s.jobId, viewModel::setJob)
 
-            FieldButton(stringResource(R.string.date), formatDateMedium(s.date), enabled = !s.isRunning) { datePicker = true }
+            FieldButton(stringResource(R.string.date), formatDateWithWeekday(s.date), enabled = !s.isRunning) { datePicker = true }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FieldButton(stringResource(R.string.start), formatTime(s.start), Modifier.weight(1f)) { timeTarget = "start" }
                 if (s.isRunning) {
@@ -117,6 +146,9 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
                 } else {
                     FieldButton(stringResource(R.string.end), formatTime(s.end), Modifier.weight(1f)) { timeTarget = "end" }
                 }
+            }
+            viewModel.preview(s)?.let { p ->
+                WorkedSummary(p)
             }
             if (s.endsNextDay) {
                 Text(stringResource(R.string.ends_next_day), style = MaterialTheme.typography.bodySmall)
@@ -126,7 +158,8 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
             }
 
             // Breaks
-            Text(stringResource(R.string.breaks), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.breaks), style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             s.breaks.forEachIndexed { i, b ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FieldButton(stringResource(R.string.start), formatTime(b.start), Modifier.weight(1f), enabled = !s.isRunning) { timeTarget = "b${i}s" }
@@ -140,7 +173,11 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
                 Text(stringResource(R.string.break_running_since, formatTime(it)), style = MaterialTheme.typography.bodySmall)
             }
             if (!s.isRunning) {
-                OutlinedButton(onClick = viewModel::addBreak) { Text(stringResource(R.string.add_break)) }
+                OutlinedButton(onClick = viewModel::addBreak) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_break))
+                }
             }
 
             OutlinedTextField(
@@ -150,20 +187,6 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            viewModel.preview(s)?.let {
-                Text(stringResource(R.string.worked_preview, formatHm(it)), fontWeight = FontWeight.SemiBold)
-            }
-
-            if (s.saveFailed) {
-                Text(stringResource(R.string.save_failed_try_again), color = MaterialTheme.colorScheme.error)
-            }
-            s.errors.forEach { e ->
-                Text(errorText(e), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-            }
-
-            Button(onClick = viewModel::save, enabled = !s.saving && s.jobId != null, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.save))
-            }
         }
     }
 
@@ -220,6 +243,55 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+/** Job picker for shifts: "● Primary job ▾" (scales to any number of jobs, unlike a chip row). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun JobDropdown(jobs: List<JobLabel>, selectedId: Long?, onSelect: (Long) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val selected = jobs.firstOrNull { it.id == selectedId }
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
+        OutlinedTextField(
+            value = selected?.name.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.job)) },
+            leadingIcon = selected?.let { j -> { JobDot(j.color, 12.dp) } },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            jobs.forEach { j ->
+                DropdownMenuItem(
+                    text = { Text(j.name) },
+                    leadingIcon = { JobDot(j.color, 12.dp) },
+                    onClick = { onSelect(j.id); open = false },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
+    }
+}
+
+/** "7:30 worked · 30 min break", tinted, right under the times so the result is visible while editing. */
+@Composable
+private fun WorkedSummary(p: WorkedPreview) {
+    Surface(color = selectorContainerColor(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.day_worked, formatHm(p.worked)),
+                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            if (p.breaks > Duration.ZERO) {
+                Text(stringResource(R.string.break_short, formatHm(p.breaks)), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 

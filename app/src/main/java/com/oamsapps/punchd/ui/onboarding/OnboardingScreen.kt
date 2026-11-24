@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oamsapps.punchd.R
+import com.oamsapps.punchd.ui.job.CurrencyField
+import com.oamsapps.punchd.ui.job.RateField
 import com.oamsapps.punchd.domain.engine.PayPeriodConfig
 import com.oamsapps.punchd.domain.engine.PayPeriodType
 import com.oamsapps.punchd.domain.model.PresetKind
@@ -116,16 +118,9 @@ private fun JobStep(s: OnboardingState, vm: OnboardingViewModel) {
         s.jobName, { vm.setJob(name = it) },
         label = { Text(stringResource(R.string.job_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
     )
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            s.rate, { vm.setJob(rate = it) },
-            label = { Text(stringResource(R.string.hourly_rate, s.currency)) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(2f),
-        )
-        OutlinedTextField(
-            s.currency, vm::setCurrency,
-            label = { Text(stringResource(R.string.currency)) }, singleLine = true, modifier = Modifier.weight(1f),
-        )
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+        RateField(s.rate, s.currency, { vm.setJob(rate = it) }, Modifier.weight(1.8f))
+        CurrencyField(s.currency, vm::setCurrency, Modifier.weight(1f))
     }
     OutlinedTextField(
         s.scheduledHours, { vm.setJob(scheduled = it) },

@@ -18,39 +18,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -62,6 +53,7 @@ import com.oamsapps.punchd.ui.theme.clockInColor
 import com.oamsapps.punchd.ui.theme.clockOutColor
 import com.oamsapps.punchd.ads.AdBanner
 import com.oamsapps.punchd.ui.ClockSkeleton
+import com.oamsapps.punchd.ui.EmptyState
 import com.oamsapps.punchd.ui.ErrorState
 import com.oamsapps.punchd.ui.HoursProgress
 import com.oamsapps.punchd.ui.PayDisclaimer
@@ -70,31 +62,21 @@ import com.oamsapps.punchd.ui.formatHm
 import com.oamsapps.punchd.ui.formatMoney
 import com.oamsapps.punchd.domain.engine.DurationParts
 import com.oamsapps.punchd.domain.model.DayFlag
-import com.oamsapps.punchd.domain.model.PresetKind
 import java.time.Duration
-import java.util.Currency
-import java.util.Locale
-
-private val JOB_COLORS = listOf(0xFF1E88E5, 0xFF43A047, 0xFFFB8C00, 0xFF8E24AA, 0xFFE53935, 0xFF00897B).map { it.toInt() }
 
 @Composable
-fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
+fun ClockScreen(onAddJob: () -> Unit, viewModel: ClockViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var showAddJob by rememberSaveable { mutableStateOf(false) }
 
-    val limitMsg = stringResource(R.string.job_limit)
-    val invalidMsg = stringResource(R.string.invalid_job)
     val saveFailedMsg = stringResource(R.string.save_failed)
     val punchFailedMsg = stringResource(R.string.punch_failed)
     val retryLabel = stringResource(R.string.retry)
     LaunchedEffect(Unit) {
         viewModel.messages.collect { msg ->
             when (msg) {
-                ClockMessage.JOB_LIMIT -> snackbar.showSnackbar(limitMsg)
-                ClockMessage.INVALID_JOB -> snackbar.showSnackbar(invalidMsg)
                 ClockMessage.SAVE_FAILED -> snackbar.showSnackbar(saveFailedMsg)
                 // Stays until dismissed: a missed punch matters more than a stray snackbar.
                 ClockMessage.PUNCH_FAILED -> if (
@@ -122,42 +104,24 @@ fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
         when {
             state.loading -> ClockSkeleton()
             state.loadError -> ErrorState(onRetry = viewModel::reload)
-            state.jobs.isEmpty() -> JobForm(
-                title = stringResource(R.string.first_job_title),
-                onSave = { name, rate, currency, preset, scheduled ->
-                    viewModel.addJob(name, rate, currency, preset, JOB_COLORS.first(), scheduled)
-                },
-                onCancel = null,
+            state.jobs.isEmpty() -> EmptyState(
+                title = stringResource(R.string.no_jobs_title),
+                body = stringResource(R.string.clock_no_jobs),
+                actionLabel = stringResource(R.string.add_job),
+                onAction = onAddJob,
             )
             else -> ClockDashboard(
                 state = state,
                 busy = busy,
                 onSelectJob = viewModel::selectJob,
-                onAddJob = { showAddJob = true },
+                onAddJob = onAddJob,
                 onClockIn = onClockIn,
                 onClockOut = viewModel::clockOut,
                 onToggleBreak = viewModel::toggleBreak,
-                showBanner = !showAddJob,
+                showBanner = true,
             )
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
-    }
-
-    if (showAddJob) {
-        AlertDialog(
-            onDismissRequest = { showAddJob = false },
-            confirmButton = {},
-            text = {
-                JobForm(
-                    title = stringResource(R.string.add_job),
-                    onSave = { name, rate, currency, preset, scheduled ->
-                        viewModel.addJob(name, rate, currency, preset, JOB_COLORS[state.jobs.size % JOB_COLORS.size], scheduled)
-                        showAddJob = false
-                    },
-                    onCancel = { showAddJob = false },
-                )
-            },
-        )
     }
 }
 
@@ -313,64 +277,6 @@ private fun TotalsCard(state: ClockUiState) {
     }
 }
 
-
-/** Shared by first-run and the add-job dialog. Full onboarding arrives in Sprint 5. */
-@Composable
-private fun JobForm(
-    title: String,
-    onSave: (name: String, rate: String, currency: String, preset: PresetKind, scheduledHours: String) -> Unit,
-    onCancel: (() -> Unit)?,
-) {
-    val locale = Locale.getDefault()
-    val defaultCurrency = remember { runCatching { Currency.getInstance(locale).currencyCode }.getOrDefault("USD") }
-    var name by rememberSaveable { mutableStateOf("") }
-    var rate by rememberSaveable { mutableStateOf("") }
-    var scheduled by rememberSaveable { mutableStateOf("") }
-    var preset by rememberSaveable {
-        mutableStateOf(
-            when (locale.country) {
-                "US" -> PresetKind.US_FEDERAL
-                "DE" -> PresetKind.GERMANY
-                else -> PresetKind.CUSTOM
-            }
-        )
-    }
-
-    Column(Modifier.fillMaxWidth().padding(if (onCancel == null) 24.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.job_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(
-            rate, { rate = it },
-            label = { Text(stringResource(R.string.hourly_rate, defaultCurrency)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            scheduled, { scheduled = it },
-            label = { Text(stringResource(R.string.scheduled_hours_optional)) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text(stringResource(R.string.rules), style = MaterialTheme.typography.titleSmall)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf(
-                PresetKind.US_FEDERAL to R.string.preset_us,
-                PresetKind.CALIFORNIA to R.string.preset_ca,
-                PresetKind.GERMANY to R.string.preset_de,
-                PresetKind.CUSTOM to R.string.preset_custom,
-            ).forEach { (kind, label) ->
-                FilterChip(selected = preset == kind, onClick = { preset = kind }, label = { Text(stringResource(label)) })
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            if (onCancel != null) TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
-            Spacer(Modifier.size(8.dp))
-            Button(onClick = { onSave(name, rate, defaultCurrency, preset, scheduled) }) { Text(stringResource(R.string.save)) }
-        }
-    }
-}
 
 // ---------- Android Studio previews (Split / Design view) ----------
 
