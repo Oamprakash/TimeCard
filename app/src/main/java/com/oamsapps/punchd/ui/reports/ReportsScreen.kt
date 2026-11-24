@@ -71,7 +71,7 @@ import com.oamsapps.punchd.ui.JobLabel
 import com.oamsapps.punchd.domain.model.JobPeriodSummary
 import com.oamsapps.punchd.ui.theme.clockOutColor
 import com.oamsapps.punchd.ui.theme.selectorContainerColor
-import com.oamsapps.punchd.ads.AdBanner
+import com.oamsapps.punchd.ads.NativeAdCard
 import com.oamsapps.punchd.export.ExportFormat
 import com.oamsapps.punchd.ui.findActivity
 import com.oamsapps.punchd.domain.engine.PayPeriodConfig
@@ -209,6 +209,10 @@ fun ReportsScreen(viewModel: ReportsViewModel = hiltViewModel()) {
 
                 if (active.isNotEmpty()) PayDisclaimer()
 
+                // Native ad in the content (replaces the bottom banner). Extra gap keeps it clear of the
+                // export buttons so it can't be tapped by mistake.
+                if (state.jobs.isNotEmpty()) NativeAdCard(Modifier.padding(bottom = 12.dp))
+
                 // 4) Export: outlined (an action, not data), share icons, one-line hint.
                 if (state.jobs.isNotEmpty()) {
                     OutlinedCard(Modifier.fillMaxWidth()) {
@@ -247,10 +251,8 @@ fun ReportsScreen(viewModel: ReportsViewModel = hiltViewModel()) {
                         }
                     }
                 }
-                // The column's 16dp padding leaves a clean margin above the banner / navigation bar.
+                // The column's 16dp padding leaves a clean margin above the navigation bar.
             }
-            // Banner at the bottom of Reports, hidden while a dialog is open.
-            AdBanner(visible = !editPeriod && askAdFor == null)
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }

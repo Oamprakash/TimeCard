@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -92,9 +93,9 @@ fun AdBanner(modifier: Modifier = Modifier, visible: Boolean = true) {
     }
 }
 
-/** A native ad styled as a timesheet row (spec: one per 10 days of entries). Nothing if ads are off or no fill. */
+/** Loads one native ad while ads are allowed; null until it fills (or if ads are off / no fill). Destroyed on dispose. */
 @Composable
-fun NativeAdRow(modifier: Modifier = Modifier) {
+private fun rememberNativeAd(): NativeAd? {
     val show = rememberShowAds()
     val context = LocalContext.current
     var ad by remember { mutableStateOf<NativeAd?>(null) }
@@ -110,14 +111,41 @@ fun NativeAdRow(modifier: Modifier = Modifier) {
             .loadAd(AdRequest.Builder().build())
     }
     DisposableEffect(Unit) { onDispose { ad?.destroy() } }
+    return if (show) ad else null
+}
 
-    val loaded = ad
-    if (!show || loaded == null) return
+@Composable
+private fun NativeAdContent(ad: NativeAd, modifier: Modifier = Modifier) {
     AndroidView(
         factory = { ctx -> LayoutInflater.from(ctx).inflate(R.layout.native_ad_row, null) as NativeAdView },
-        update = { view -> bind(view, loaded) },
+        update = { view -> bind(view, ad) },
         modifier = modifier.fillMaxWidth(),
     )
+}
+
+/** A native ad styled as a timesheet row (spec: one per 10 days of entries). Nothing if ads are off or no fill. */
+@Composable
+fun NativeAdRow(modifier: Modifier = Modifier) {
+    val ad = rememberNativeAd() ?: return
+    NativeAdContent(ad, modifier)
+}
+
+/**
+ * A native ad in an outlined card, matching the Reports cards. Takes no space until an ad fills,
+ * so there's never an empty box. Callers keep it away from action buttons (AdMob accidental-click policy).
+ */
+@Composable
+fun NativeAdCard(modifier: Modifier = Modifier) {
+    if (LocalInspectionMode.current) {
+        OutlinedCard(modifier.fillMaxWidth()) {
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(56.dp).padding(16.dp))
+        }
+        return
+    }
+    val ad = rememberNativeAd() ?: return
+    OutlinedCard(modifier.fillMaxWidth()) {
+        NativeAdContent(ad, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    }
 }
 
 private fun bind(view: NativeAdView, ad: NativeAd) {

@@ -95,7 +95,7 @@ The full pre-release list is in `docs/launch-checklist.md`.
 - **Ads**, following the spec's placement table. They are all off when consent hasn't been given or Remove ads is owned.
   - Clock tab: an adaptive banner below everything, hidden while a dialog is open.
   - Timesheet: one native row after every 10th day with entries.
-  - Reports: a banner at the bottom.
+  - Reports: a native ad card between the job cards and the export card (no banner).
   - PDF/Excel export: one rewarded ad, which the user always opts into through a prompt. If no ad loads (offline, no fill), the export still happens.
   - After saving a manual edit: an interstitial, at most 1 per 5 minutes and 2 per day (`InterstitialPolicy`).
   - Never on clock in/out, the notification or its actions.
