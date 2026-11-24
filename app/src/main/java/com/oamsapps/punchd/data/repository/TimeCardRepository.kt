@@ -148,6 +148,18 @@ class TimeCardRepository @Inject constructor(
         true
     }
 
+    /**
+     * Deletes a job with all its shifts, breaks and day marks (cascade), then its own rule set.
+     * @return false if the job is clocked in right now (clock out first) or doesn't exist.
+     */
+    suspend fun deleteJob(jobId: Long): Boolean = db.withTransaction {
+        if (shifts.getRunning()?.shift?.jobId == jobId) return@withTransaction false
+        val job = jobs.getWithRules(jobId)?.job ?: return@withTransaction false
+        jobs.deleteById(jobId)
+        rules.deleteById(job.ruleSetId) // after the job: jobs → rule_sets is RESTRICT
+        true
+    }
+
     suspend fun jobWithRules(jobId: Long): JobWithRules? = jobs.getWithRules(jobId)
 
     /** All jobs' shifts whose local start date is in [from]..[to]. */

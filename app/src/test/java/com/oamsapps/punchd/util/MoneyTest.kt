@@ -16,4 +16,11 @@ class MoneyTest {
     @Test fun yenHasNoDecimals() = assertEquals("¥${nb}1,200", m("1199.6", "JPY", Locale.US))
     @Test fun unknownCodeFallsBackToCode() = assertEquals("XYZ${nb}5.00", m("5", "XYZ", Locale.US))
     @Test fun roundsHalfUp() = assertEquals("$$nb" + "0.13", m("0.125", "USD", Locale.US))
+
+    @Test fun currencySymbolShortAndFallback() {
+        assertEquals("$", currencySymbol("USD", Locale.US))
+        assertEquals("₹", currencySymbol("INR", Locale("en", "IN")))
+        assertEquals("€", currencySymbol("EUR", Locale.GERMANY))
+        assertEquals("XYZ", currencySymbol("XYZ", Locale.US))
+    }
 }

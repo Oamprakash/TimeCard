@@ -22,6 +22,10 @@ private const val NBSP = ' '
  * the locale puts it, with the currency's own number of decimals. The currency *code* goes in a row
  * label where it's needed (e.g. "USD" in the All jobs totals), never next to the symbol.
  */
+/** Short symbol for a currency code ("$", "€", "₹"), the code itself if unknown. */
+fun currencySymbol(currencyCode: String, locale: Locale = Locale.getDefault()): String =
+    NARROW_SYMBOLS[currencyCode] ?: runCatching { Currency.getInstance(currencyCode).getSymbol(locale) }.getOrNull() ?: currencyCode
+
 fun formatMoneyNarrow(amount: BigDecimal, currencyCode: String, locale: Locale = Locale.getDefault()): String {
     val currency = runCatching { Currency.getInstance(currencyCode) }.getOrNull()
     val symbol = NARROW_SYMBOLS[currencyCode] ?: currency?.getSymbol(locale) ?: currencyCode

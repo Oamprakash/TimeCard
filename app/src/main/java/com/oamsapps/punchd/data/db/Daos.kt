@@ -19,6 +19,7 @@ interface RuleSetDao {
     @Query("SELECT * FROM rule_sets") suspend fun getAll(): List<RuleSetEntity>
     @Insert suspend fun insertAll(rows: List<RuleSetEntity>)
     @Query("DELETE FROM rule_sets") suspend fun deleteAll()
+    @Query("DELETE FROM rule_sets WHERE id = :id") suspend fun deleteById(id: Long)
 }
 
 @Dao
@@ -44,6 +45,8 @@ interface JobDao {
     @Query("SELECT * FROM jobs") suspend fun getAll(): List<JobEntity>
     @Insert suspend fun insertAll(rows: List<JobEntity>)
     @Query("DELETE FROM jobs") suspend fun deleteAll()
+    /** Shifts, their breaks and day marks go with it (FK cascade). */
+    @Query("DELETE FROM jobs WHERE id = :id") suspend fun deleteById(id: Long)
 }
 
 @Dao

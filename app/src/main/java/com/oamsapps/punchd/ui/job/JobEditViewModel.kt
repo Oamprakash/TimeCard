@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 
 val JOB_COLORS = listOf(0xFF1E88E5, 0xFF43A047, 0xFFFB8C00, 0xFF8E24AA, 0xFFE53935, 0xFF00897B, 0xFF6D4C41, 0xFF546E7A).map { it.toInt() }
 
-enum class JobFormError { NAME, RATE, CURRENCY, HOURS, MULTIPLIER, DOUBLE_BEFORE_OT, JOB_LIMIT, ARCHIVE_RUNNING, SAVE_FAILED }
+enum class JobFormError { NAME, RATE, CURRENCY, HOURS, MULTIPLIER, DOUBLE_BEFORE_OT, JOB_LIMIT, ARCHIVE_RUNNING, DELETE_RUNNING, SAVE_FAILED }
 
 /** Editor fields as typed. Hours are text so "7,5" works; blank = rule off. */
 data class JobEditState(
@@ -126,6 +126,24 @@ class JobEditViewModel @Inject constructor(
             }
             if (ok) _state.update { it.copy(archived = archived, error = null) }
             else _state.update { it.copy(error = JobFormError.ARCHIVE_RUNNING) }
+        }
+    }
+
+    /** Deletes the job and its history; refuses while clocked in to it. Closes the screen on success. */
+    fun delete() {
+        val id = jobId ?: return
+        viewModelScope.launch {
+            val ok = try { repo.deleteJob(id) } catch (e: CancellationException) { throw e } catch (_: Exception) {
+                _state.update { it.copy(error = JobFormError.SAVE_FAILED) }
+                return@launch
+            }
+            if (!ok) {
+                _state.update { it.copy(error = JobFormError.DELETE_RUNNING) }
+                return@launch
+            }
+            runCatching { if (settings.settings.first().selectedJobId == id) settings.clearSelectedJob() }
+            runCatching { controller.sync() } // widget and reminders drop the job
+            _done.trySend(Unit)
         }
     }
 

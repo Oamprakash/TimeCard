@@ -1,8 +1,6 @@
 package com.oamsapps.punchd.ui.job
 
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,15 +39,46 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import com.oamsapps.punchd.ui.theme.selectorContainerColor
+import com.oamsapps.punchd.util.currencySymbol
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.ui.FormSkeleton
 import com.oamsapps.punchd.domain.model.PresetKind
 import androidx.compose.foundation.background
 
+/** Common currencies first; any other valid code the job already uses is added to the list. */
+private val CURRENCIES = listOf("USD", "EUR", "GBP", "INR", "CAD", "AUD", "NZD", "CHF", "JPY", "SGD", "AED", "ZAR", "MXN", "BRL", "SEK", "NOK", "DKK", "PLN")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewModel()) {
     val s by viewModel.state.collectAsStateWithLifecycle()
+    var confirmDelete by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { viewModel.done.collect { onClose() } }
 
     Scaffold(
@@ -58,6 +87,35 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
                 title = { Text(stringResource(if (s.isNew) R.string.add_job else R.string.edit_job)) },
                 navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
             )
+        },
+        // Actions pinned to the bottom so Save is always reachable; errors show right above them.
+        bottomBar = {
+            if (!s.loading) {
+                Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
+                    Column(Modifier.navigationBarsPadding().imePadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        s.error?.let {
+                            Text(errorText(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (!s.isNew) {
+                                OutlinedButton(
+                                    onClick = { confirmDelete = true },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                ) {
+                                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.delete_job), maxLines = 1)
+                                }
+                            }
+                            Button(onClick = viewModel::save, enabled = !s.saving, modifier = Modifier.weight(1f).height(48.dp)) {
+                                Text(stringResource(R.string.save))
+                            }
+                        }
+                    }
+                }
+            }
         },
     ) { padding ->
         if (s.loading) {
@@ -69,31 +127,46 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Field(s.name, { v -> viewModel.edit { copy(name = v) } }, stringResource(R.string.job_name), numeric = false)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Field(s.rate, { v -> viewModel.edit { copy(rate = v) } }, stringResource(R.string.hourly_rate, s.currency), Modifier.weight(2f))
-                Field(s.currency, { v -> viewModel.edit { copy(currency = v.uppercase().take(3)) } }, stringResource(R.string.currency), Modifier.weight(1f), numeric = false)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+                OutlinedTextField(
+                    value = s.rate,
+                    onValueChange = { v -> viewModel.edit { copy(rate = v) } },
+                    label = { Text(stringResource(R.string.hourly_rate_plain)) },
+                    prefix = { Text(currencySymbol(s.currency) + " ") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1.8f),
+                )
+                CurrencyField(s.currency, { c -> viewModel.edit { copy(currency = c) } }, Modifier.weight(1f))
             }
             Field(s.scheduledHours, { v -> viewModel.edit { copy(scheduledHours = v) } }, stringResource(R.string.scheduled_hours_optional))
 
             Text(stringResource(R.string.color), style = MaterialTheme.typography.titleSmall)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                JOB_COLORS.forEach { c ->
-                    Box(
-                        Modifier.size(32.dp).clip(CircleShape).background(Color(c))
-                            .then(if (c == s.color) Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
-                            .clickable { viewModel.edit { copy(color = c) } },
-                    )
-                }
+            Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.SpaceBetween) {
+                JOB_COLORS.forEach { c -> ColorSwatch(c, selected = c == s.color) { viewModel.edit { copy(color = c) } } }
             }
 
-            HorizontalDivider()
-            Text(stringResource(R.string.rules), style = MaterialTheme.typography.titleMedium)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    PresetKind.US_FEDERAL to R.string.preset_short_us, PresetKind.CALIFORNIA to R.string.preset_short_ca,
-                    PresetKind.GERMANY to R.string.preset_short_de, PresetKind.CUSTOM to R.string.preset_short_custom,
-                ).forEach { (kind, label) ->
-                    FilterChip(selected = s.preset == kind, onClick = { viewModel.applyPreset(kind) }, label = { Text(stringResource(label)) })
+            Spacer(Modifier.height(4.dp))
+            Text(stringResource(R.string.rules), style = MaterialTheme.typography.titleSmall)
+            // 2×2 preset grid: equal widths, label centred, ✓ + mint on the selected one.
+            listOf(
+                PresetKind.US_FEDERAL to R.string.preset_short_us, PresetKind.CALIFORNIA to R.string.preset_short_ca,
+                PresetKind.GERMANY to R.string.preset_short_de, PresetKind.CUSTOM to R.string.preset_short_custom,
+            ).chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    pair.forEach { (kind, label) ->
+                        val selected = s.preset == kind
+                        FilterChip(
+                            selected = selected,
+                            onClick = { viewModel.applyPreset(kind) },
+                            label = { Text(stringResource(label), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                            leadingIcon = if (selected) {
+                                { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                            } else null,
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = selectorContainerColor()),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                        )
+                    }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -110,25 +183,84 @@ fun JobEditScreen(onClose: () -> Unit, viewModel: JobEditViewModel = hiltViewMod
                 Field(s.autoBreakAfterHours, { v -> viewModel.edit { copy(autoBreakAfterHours = v) } }, stringResource(R.string.rule_auto_break_after), Modifier.weight(1f))
             }
             Field(s.maxDailyHours, { v -> viewModel.edit { copy(maxDailyHours = v) } }, stringResource(R.string.rule_max_daily))
-            Text(stringResource(R.string.rules_hint), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.rules_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (s.preset == PresetKind.GERMANY) {
-                Text(stringResource(R.string.rules_de_breaks_hint), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.rules_de_breaks_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             if (!s.isNew) {
-                HorizontalDivider()
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(stringResource(R.string.archive_job))
-                        Text(stringResource(R.string.archive_job_hint), style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.archive_job_hint), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(checked = s.archived, onCheckedChange = viewModel::setArchived)
                 }
             }
-
-            s.error?.let { Text(errorText(it), color = MaterialTheme.colorScheme.error) }
-            Button(onClick = viewModel::save, enabled = !s.saving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save)) }
         }
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            icon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(stringResource(R.string.delete_job_q, s.name.trim())) },
+            text = { Text(stringResource(R.string.delete_job_warning)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { confirmDelete = false; viewModel.delete() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+}
+
+/** Currency as an exposed dropdown ("USD ▾"); names in the menu, code in the field. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CurrencyField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    val options = remember(value) { if (value in CURRENCIES || value.isBlank()) CURRENCIES else listOf(value) + CURRENCIES }
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.currency)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { code ->
+                val name = remember(code) { runCatching { java.util.Currency.getInstance(code).displayName }.getOrDefault(code) }
+                DropdownMenuItem(
+                    text = { Text("$code · $name", maxLines = 1) },
+                    onClick = { onChange(code); open = false },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
+        }
+    }
+}
+
+/** 36dp colour circle; the selected one gets a ✓ and an outer ring. */
+@Composable
+private fun ColorSwatch(color: Int, selected: Boolean, onClick: () -> Unit) {
+    val ring = MaterialTheme.colorScheme.onSurface
+    Box(
+        Modifier.size(36.dp).clip(CircleShape)
+            .then(if (selected) Modifier.border(2.dp, ring, CircleShape).padding(4.dp) else Modifier)
+            .clip(CircleShape).background(Color(color))
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -155,6 +287,7 @@ private fun errorText(e: JobFormError) = stringResource(
         JobFormError.DOUBLE_BEFORE_OT -> R.string.err_job_double_before_ot
         JobFormError.JOB_LIMIT -> R.string.job_limit
         JobFormError.ARCHIVE_RUNNING -> R.string.err_archive_running
+        JobFormError.DELETE_RUNNING -> R.string.err_delete_running
         JobFormError.SAVE_FAILED -> R.string.save_failed_try_again
     }
 )
