@@ -40,7 +40,7 @@
     <string name="preset_custom">Keine / eigene</string>
     <string name="save">Speichern</string>
     <string name="cancel">Abbrechen</string>
-    <string name="job_limit">Die kostenlose Version erlaubt 3 Jobs. Entferne die Werbung, um mehr hinzuzufügen.</string>
+    <string name="job_limit">Die kostenlose Version erlaubt 3 Jobs. Mit Pro kannst du mehr hinzufügen.</string>
     <string name="invalid_job">Gib einen Jobnamen und einen Stundenlohn ein.</string>
     <string name="flag_missing_break">Pausenregel heute nicht eingehalten</string>
     <string name="flag_over_max">Tageshöchstarbeitszeit überschritten</string>
@@ -104,7 +104,7 @@
     <string name="worked_vs_scheduled">Ist / Soll</string>
     <string name="ad_badge">Anzeige</string>
     <string name="billing_unavailable">Käufe sind gerade nicht möglich. Prüfe deine Verbindung und Google Play und versuche es erneut.</string>
-    <string name="export_ad_prompt">Sieh dir ein kurzes Video an, um diesen Abrechnungszeitraum zu exportieren. CSV-Export ist immer kostenlos, und mit „Werbung entfernen“ sind alle Exporte kostenlos.</string>
+    <string name="export_ad_prompt">Sieh dir ein kurzes Video an, um diesen Abrechnungszeitraum zu exportieren. CSV-Export ist immer kostenlos, und mit Pro ist jeder Export kostenlos.</string>
     <string name="export_col_breaks">Pausen (Std.)</string>
     <string name="export_col_currency">Währung</string>
     <string name="export_col_double">Doppelter Satz (Std.)</string>
@@ -134,13 +134,11 @@
     <string name="export_total">Summe</string>
     <string name="privacy_options">Datenschutzoptionen (Werbung)</string>
     <string name="purchase_pending">Kauf ausstehend: wird freigeschaltet, sobald Google Play die Zahlung bestätigt.</string>
-    <string name="remove_ads">Werbung entfernen</string>
-    <string name="remove_ads_benefits">Einmaliger Kauf: keine Werbung, unbegrenzt viele Jobs und kostenloser PDF- und Excel-Export.</string>
-    <string name="remove_ads_for">Werbung entfernen · %1$s</string>
-    <string name="remove_ads_owned">Werbung entfernt. Danke für deine Unterstützung!</string>
+    <string name="remove_ads">Upgrade auf Pro</string>
+    <string name="remove_ads_for">Upgrade auf Pro • %1$s</string>
+    <string name="remove_ads_owned">Du hast Pro. Danke für deine Unterstützung!</string>
     <string name="restore_purchases">Käufe wiederherstellen</string>
     <string name="watch_video">Video ansehen</string>
-    <string name="after_hours">Nach %1$d Std.</string>
     <string name="alert_break_text">Du hast heute mehr als %1$s gearbeitet und weniger als %2$s Pause gemacht. Mach eine Pause und tippe auf „Pause starten“.</string>
     <string name="alert_break_title">Zeit für eine Pause</string>
     <string name="alert_max_text">Du hast heute mehr als %1$s gearbeitet, die Tageshöchstzeit in deinen Regeln.</string>
@@ -248,4 +246,10 @@
     <string name="period_start_date">Startdatum des Zeitraums</string>
     <string name="period_semi_monthly_detail">(1.–15., 16.–Monatsende)</string>
     <string name="day_worked">%1$s gearbeitet</string>
+    <string name="pro_no_ads">Keine Werbung</string>
+    <string name="pro_unlimited_jobs">Unbegrenzt viele Jobs</string>
+    <string name="pro_free_exports">PDF- und Excel-Export ohne Werbung</string>
+    <string name="pro_one_time">Einmaliger Kauf. Kein Abo.</string>
+    <string name="remind_after">Erinnern nach</string>
+    <string name="hours_short">%1$d Std.</string>
 </resources>

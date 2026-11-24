@@ -7,7 +7,23 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +38,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
@@ -64,6 +79,7 @@ import kotlinx.coroutines.launch
 /** Hosted on the developer site (GitHub Pages). See docs/privacy-policy.md. */
 const val PRIVACY_POLICY_URL = "https://oamprakash.github.io/punchd/privacy.html"
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onEditJob: (Long) -> Unit,
@@ -119,116 +135,177 @@ fun SettingsScreen(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Jobs & rules
+            // Jobs & rules: tappable rows (48dp, chevron) + "+ Add job"
             Section(stringResource(R.string.settings_jobs)) {
                 s.jobs.forEach { j ->
                     Row(
-                        Modifier.fillMaxWidth().clickable { onEditJob(j.label.id) }.padding(vertical = 10.dp),
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp))
+                            .clickable(onClickLabel = stringResource(R.string.edit_job)) { onEditJob(j.label.id) },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         JobDot(j.label.color, 12.dp)
-                        Spacer(Modifier.width(10.dp))
-                        Text(j.label.name, modifier = Modifier.weight(1f))
-                        if (j.archived) Text(stringResource(R.string.archived), style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.width(12.dp))
+                        Text(j.label.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        if (j.archived) {
+                            Text(stringResource(R.string.archived), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                OutlinedButton(onClick = onAddJob) { Text(stringResource(R.string.add_job)) }
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(onClick = onAddJob) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.add_job))
+                }
             }
 
-            // Pay period & week
-            if (settings != null) {
-                Section(stringResource(R.string.pay_period)) {
-                    Text(periodTypeLabel(settings.payPeriod.type), fontWeight = FontWeight.SemiBold)
-                    if (settings.payPeriod.type != PayPeriodType.SEMI_MONTHLY) {
-                        Text(stringResource(R.string.period_starts_on, formatDateMedium(settings.payPeriod.anchor)))
+            // Pay period: "Change" as the card's header action
+            Section(
+                title = stringResource(R.string.pay_period),
+                action = {
+                    TextButton(onClick = { editPeriod = true }) {
+                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.change))
                     }
-                    Text(stringResource(R.string.week_starts_on) + ": " + settings.weekStart.getDisplayName(TextStyle.FULL, Locale.getDefault()))
-                    TextButton(onClick = { editPeriod = true }) { Text(stringResource(R.string.change)) }
+                },
+            ) {
+                Text(periodTypeLabel(settings.payPeriod.type), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                if (settings.payPeriod.type != PayPeriodType.SEMI_MONTHLY) {
+                    Text(stringResource(R.string.period_starts_on, formatDateMedium(settings.payPeriod.anchor)),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Text(
+                    stringResource(R.string.week_starts_on) + ": " + settings.weekStart.getDisplayName(TextStyle.FULL, Locale.getDefault()),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-                // Reminders
-                Section(stringResource(R.string.settings_reminders)) {
-                    SwitchRow(
-                        title = stringResource(R.string.reminder_still_title),
-                        subtitle = stringResource(R.string.reminder_still_text),
-                        checked = settings.stillClockedInHours != null,
-                        onChange = { on -> viewModel.setReminders(if (on) DEFAULT_STILL_CLOCKED_IN_HOURS else null, settings.ruleWarnings) },
-                    )
-                    settings.stillClockedInHours?.let { current ->
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(6, 8, 10, 12).forEach { h ->
-                                FilterChip(
-                                    selected = current == h,
-                                    onClick = { viewModel.setReminders(h, settings.ruleWarnings) },
-                                    label = { Text(stringResource(R.string.after_hours, h)) },
-                                )
-                            }
+            // Reminders: compact segmented hours, never clipped
+            Section(stringResource(R.string.settings_reminders)) {
+                SwitchRow(
+                    title = stringResource(R.string.reminder_still_title),
+                    subtitle = stringResource(R.string.reminder_still_text),
+                    checked = settings.stillClockedInHours != null,
+                    onChange = { on -> viewModel.setReminders(if (on) DEFAULT_STILL_CLOCKED_IN_HOURS else null, settings.ruleWarnings) },
+                )
+                settings.stillClockedInHours?.let { current ->
+                    Text(stringResource(R.string.remind_after), style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val options = listOf(6, 8, 10, 12)
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        options.forEachIndexed { i, h ->
+                            SegmentedButton(
+                                selected = current == h,
+                                onClick = { viewModel.setReminders(h, settings.ruleWarnings) },
+                                shape = SegmentedButtonDefaults.itemShape(i, options.size, RoundedCornerShape(8.dp)),
+                                colors = SegmentedButtonDefaults.colors(
+                                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                    activeBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                                icon = {},
+                                label = { Text(stringResource(R.string.hours_short, h), maxLines = 1) },
+                            )
                         }
                     }
-                    SwitchRow(
-                        title = stringResource(R.string.reminder_rules_title),
-                        subtitle = stringResource(R.string.reminder_rules_text),
-                        checked = settings.ruleWarnings,
-                        onChange = { on -> viewModel.setReminders(settings.stillClockedInHours, on) },
-                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+                SwitchRow(
+                    title = stringResource(R.string.reminder_rules_title),
+                    subtitle = stringResource(R.string.reminder_rules_text),
+                    checked = settings.ruleWarnings,
+                    onChange = { on -> viewModel.setReminders(settings.stillClockedInHours, on) },
+                )
+            }
+
+            // Upgrade to Pro: benefits as bullets, price in the filled button, restore centred
+            Section(stringResource(R.string.remove_ads)) {
+                if (s.adsRemoved) {
+                    Text(stringResource(R.string.remove_ads_owned), color = MaterialTheme.colorScheme.primary)
+                } else {
+                    listOf(R.string.pro_no_ads, R.string.pro_unlimited_jobs, R.string.pro_free_exports).forEach { res ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(stringResource(res), style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Text(stringResource(R.string.pro_one_time), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    if (s.purchasePending) {
+                        Text(stringResource(R.string.purchase_pending))
+                    } else {
+                        Button(
+                            onClick = {
+                                val activity = context.findActivity()
+                                if (activity == null || !viewModel.buyRemoveAds(activity)) scope.launch { snackbar.showSnackbar(unavailable) }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                        ) { Text(s.price?.let { stringResource(R.string.remove_ads_for, it) } ?: stringResource(R.string.remove_ads)) }
+                    }
+                }
+                TextButton(onClick = { viewModel.restore() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text(stringResource(R.string.restore_purchases))
                 }
             }
 
             // Language (per-app language is an Android 13+ system feature)
             Section(stringResource(R.string.settings_language)) {
                 if (Build.VERSION.SDK_INT >= 33) {
-                    OutlinedButton(onClick = {
+                    LinkRow(stringResource(R.string.app_language), external = true) {
                         runCatching {
                             context.startActivity(
                                 Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", context.packageName, null))
                             )
                         }
-                    }) { Text(stringResource(R.string.app_language)) }
+                    }
                 } else {
                     Text(stringResource(R.string.language_follows_device), style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            // Backup
+            // Backup: icon-labelled export (save out) / import (restore)
             Section(stringResource(R.string.settings_backup)) {
-                Text(stringResource(R.string.backup_text), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.backup_text), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { viewModel.exportBackup() }) { Text(stringResource(R.string.backup_export)) }
-                    OutlinedButton(onClick = { picker.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }) {
+                    OutlinedButton(onClick = { viewModel.exportBackup() }, modifier = Modifier.weight(1f)) {
+                        Icon(painterResource(R.drawable.ic_upload), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.backup_export))
+                    }
+                    OutlinedButton(
+                        onClick = { picker.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(painterResource(R.drawable.ic_download), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.backup_import))
                     }
                 }
             }
 
-            // Remove ads
-            Section(stringResource(R.string.remove_ads)) {
-                Text(stringResource(R.string.remove_ads_benefits), style = MaterialTheme.typography.bodyMedium)
-                when {
-                    s.adsRemoved -> Text(stringResource(R.string.remove_ads_owned), color = MaterialTheme.colorScheme.primary)
-                    s.purchasePending -> Text(stringResource(R.string.purchase_pending))
-                    else -> Button(
-                        onClick = {
-                            val activity = context.findActivity()
-                            if (activity == null || !viewModel.buyRemoveAds(activity)) scope.launch { snackbar.showSnackbar(unavailable) }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(s.price?.let { stringResource(R.string.remove_ads_for, it) } ?: stringResource(R.string.remove_ads)) }
-                }
-                TextButton(onClick = { viewModel.restore() }) { Text(stringResource(R.string.restore_purchases)) }
-            }
-
-            // Privacy & about
+            // Privacy & about: list rows aligned with the card text, version footer
             Section(stringResource(R.string.settings_about)) {
                 if (s.privacyOptionsRequired) {
-                    TextButton(onClick = { context.findActivity()?.let(viewModel::privacyOptions) }) {
-                        Text(stringResource(R.string.privacy_options))
-                    }
+                    LinkRow(stringResource(R.string.privacy_options)) { context.findActivity()?.let(viewModel::privacyOptions) }
                 }
-                TextButton(onClick = { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL))) } }) {
-                    Text(stringResource(R.string.privacy_policy))
+                LinkRow(stringResource(R.string.privacy_policy), external = true) {
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL))) }
                 }
-                Text(stringResource(R.string.pay_disclaimer), style = MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.pay_disclaimer), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
@@ -257,21 +334,45 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+private fun Section(
+    title: String,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                action?.invoke()
+            }
             content()
+        }
+    }
+}
+
+/** Full-width 48dp row aligned with the card's text; open-in-new for links that leave the app, chevron otherwise. */
+@Composable
+private fun LinkRow(text: String, external: Boolean = false, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+        if (external) {
+            Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp))
+        } else {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall)
+    Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onChange)
     }

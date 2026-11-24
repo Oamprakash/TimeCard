@@ -56,7 +56,7 @@ Your employer's system tracks time for the company. Punchd is your own record, s
 • Back up to a file and restore it on a new phone
 • English and German
 
-Remove ads with a one-time purchase. There's no subscription. It also unlocks unlimited jobs and free PDF and Excel export.
+Upgrade to Pro with a one-time purchase (no subscription): no ads, unlimited jobs, and PDF and Excel export without ads.
 
 Pay figures are estimates to help you check your pay stub. They aren't legal or payroll advice.
 

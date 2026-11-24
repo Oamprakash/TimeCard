@@ -40,7 +40,7 @@
     <string name="preset_custom">None / custom</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
-    <string name="job_limit">The free version allows 3 jobs. Remove ads to add more.</string>
+    <string name="job_limit">The free version allows 3 jobs. Upgrade to Pro to add more.</string>
     <string name="invalid_job">Enter a job name and an hourly rate.</string>
     <string name="flag_missing_break">Break rule not met today</string>
     <string name="flag_over_max">Over the daily maximum hours</string>
@@ -104,7 +104,7 @@
     <string name="worked_vs_scheduled">Worked / scheduled</string>
     <string name="ad_badge">Ad</string>
     <string name="billing_unavailable">Purchases aren\'t available right now. Check your connection and Google Play, then try again.</string>
-    <string name="export_ad_prompt">Watch a short video to export this pay period. CSV export is always free, and Remove ads makes every export free.</string>
+    <string name="export_ad_prompt">Watch a short video to export this pay period. CSV export is always free, and Pro makes every export free.</string>
     <string name="export_col_breaks">Breaks (h)</string>
     <string name="export_col_currency">Currency</string>
     <string name="export_col_double">Double time (h)</string>
@@ -134,13 +134,11 @@
     <string name="export_total">Total</string>
     <string name="privacy_options">Privacy options (ads)</string>
     <string name="purchase_pending">Purchase pending: it unlocks as soon as Google Play confirms the payment.</string>
-    <string name="remove_ads">Remove ads</string>
-    <string name="remove_ads_benefits">One-time purchase: no ads, unlimited jobs and free PDF and Excel export.</string>
-    <string name="remove_ads_for">Remove ads · %1$s</string>
-    <string name="remove_ads_owned">Ads removed. Thank you for supporting the app!</string>
+    <string name="remove_ads">Upgrade to Pro</string>
+    <string name="remove_ads_for">Upgrade to Pro • %1$s</string>
+    <string name="remove_ads_owned">You have Pro. Thanks for supporting the app!</string>
     <string name="restore_purchases">Restore purchases</string>
     <string name="watch_video">Watch video</string>
-    <string name="after_hours">After %1$d h</string>
     <string name="alert_break_text">You\'ve worked more than %1$s today with less than %2$s of breaks. Take a break and tap Start break.</string>
     <string name="alert_break_title">Time for a break</string>
     <string name="alert_max_text">You\'ve worked more than %1$s today, the daily maximum in your rules.</string>
@@ -248,4 +246,10 @@
     <string name="period_start_date">Period start date</string>
     <string name="period_semi_monthly_detail">(1–15, 16–end)</string>
     <string name="day_worked">%1$s worked</string>
+    <string name="pro_no_ads">No ads</string>
+    <string name="pro_unlimited_jobs">Unlimited jobs</string>
+    <string name="pro_free_exports">PDF and Excel export without ads</string>
+    <string name="pro_one_time">One-time purchase. No subscription.</string>
+    <string name="remind_after">Remind me after</string>
+    <string name="hours_short">%1$d h</string>
 </resources>

@@ -28,7 +28,7 @@ ui/timesheet    Week/month timesheet, day sheet (shifts, sick/holiday/leave per 
 ui/shift        Add/edit shift: job, date, start/end (night shifts), breaks, note, delete
 ui/reports      Pay-period report per job, totals per currency, pay-period + week-start picker
 ui/onboarding   Country -> rule preset, first job, pay period (first run only)
-ui/settings     Jobs & rules, pay period, reminders, language, backup, Remove ads, privacy, about
+ui/settings     Jobs & rules, pay period, reminders, language, Upgrade to Pro, backup, privacy, about
 ui/job          Job editor: rate, currency, colour, schedule, overtime rules, auto-break, archive
 widget          Glance home-screen widget: live timer, today's hours, Clock in/out (ad-free)
 backup          Backup model + tiny JSON reader/writer (pure Kotlin); data/backup maps Room <-> backup
@@ -124,7 +124,7 @@ The full pre-release list is in `docs/launch-checklist.md`.
   - Pay period and week start.
   - Reminders: "still clocked in?" after 6/8/10/12 h, and rule warnings on or off.
   - Language: Android 13+ per-app language for English and German (`locales_config.xml`).
-  - Backup, Remove ads, privacy options, privacy policy, version.
+  - Upgrade to Pro, backup, privacy options, privacy policy, version.
 - **Reminders** (`ReminderPlanner` + `Reminders`):
   - Alerts: "Still clocked in?" (with a Clock out button), plus the German "more than 6 h without 30 min of breaks", "more than 9 h without 45 min" and "over 10 h today". The 10 h limit counts all of the day's shifts.
   - Each alert fires once per shift. One WorkManager job sleeps until the next threshold, with no polling and no foreground service.
