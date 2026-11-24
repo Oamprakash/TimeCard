@@ -19,7 +19,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +50,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.domain.engine.PayPeriodConfig
 import com.oamsapps.punchd.domain.engine.PayPeriodType
@@ -76,7 +80,7 @@ private fun formatDateWithWeekday(date: LocalDate): String {
 }
 
 /**
- * Pay period frequency, its start date and the week start, as one card-style dialog:
+ * Pay period frequency, its start date and the week start, as a modal bottom sheet:
  * radio cards for the frequency, a date field, a segmented week-start control, filled Save.
  * Used by onboarding, Settings and Reports.
  */
@@ -88,84 +92,110 @@ fun PayPeriodDialog(
     onDismiss: () -> Unit,
     onSave: (PayPeriodConfig, DayOfWeek) -> Unit,
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    // Slide the sheet down first, then report back, so Cancel/Save animate like a drag-to-dismiss.
+    fun close(then: () -> Unit) {
+        scope.launch { sheetState.hide() }.invokeOnCompletion { then() }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+    ) {
+        PayPeriodSheetContent(
+            initial = initial,
+            initialWeekStart = initialWeekStart,
+            onCancel = { close(onDismiss) },
+            onSave = { config, weekStart -> close { onSave(config, weekStart) } },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PayPeriodSheetContent(
+    initial: PayPeriodConfig,
+    initialWeekStart: DayOfWeek,
+    onCancel: () -> Unit,
+    onSave: (PayPeriodConfig, DayOfWeek) -> Unit,
+) {
     var type by remember { mutableStateOf(initial.type) }
     var anchor by remember { mutableStateOf(initial.anchor) }
     var weekStart by remember { mutableStateOf(initialWeekStart) }
     var pickDate by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp)) {
-                Text(stringResource(R.string.pay_period), style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.select_frequency), style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, bottom = 24.dp)) {
+        Text(stringResource(R.string.pay_period), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.select_frequency), style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
 
-                Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PayPeriodType.entries.forEach { t ->
-                        FrequencyOption(
-                            label = periodTypeLabel(t),
-                            detail = if (t == PayPeriodType.SEMI_MONTHLY) stringResource(R.string.period_semi_monthly_detail) else null,
-                            selected = type == t,
-                            onClick = { type = t },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-                if (type != PayPeriodType.SEMI_MONTHLY) {
-                    // Read-only field; an overlay takes the tap so the whole field opens the date picker.
-                    Box {
-                        OutlinedTextField(
-                            value = stringResource(R.string.period_starts_on, formatDateWithWeekday(anchor)),
-                            onValueChange = {},
-                            readOnly = true,
-                            singleLine = true,
-                            label = { Text(stringResource(R.string.period_start_date)) },
-                            trailingIcon = { Icon(Icons.Outlined.DateRange, contentDescription = null) },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Box(
-                            Modifier.matchParentSize().padding(top = 8.dp)
-                                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.period_start_date)) { pickDate = true }
-                        )
-                    }
-                } else {
-                    Text(stringResource(R.string.semi_monthly_hint), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-
-                Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.week_starts_on), style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                val days = listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    days.forEachIndexed { i, d ->
-                        SegmentedButton(
-                            selected = weekStart == d,
-                            onClick = { weekStart = d },
-                            shape = SegmentedButtonDefaults.itemShape(i, days.size, RoundedCornerShape(8.dp)),
-                            colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary,
-                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                activeBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
-                            icon = {},
-                            label = { Text(d.getDisplayName(TextStyle.FULL, Locale.getDefault()), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(24.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = { onSave(PayPeriodConfig(type, anchor), weekStart) }) { Text(stringResource(R.string.save)) }
-                }
+        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            PayPeriodType.entries.forEach { t ->
+                FrequencyOption(
+                    label = periodTypeLabel(t),
+                    detail = if (t == PayPeriodType.SEMI_MONTHLY) stringResource(R.string.period_semi_monthly_detail) else null,
+                    selected = type == t,
+                    onClick = { type = t },
+                )
             }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        if (type != PayPeriodType.SEMI_MONTHLY) {
+            // Read-only field; an overlay takes the tap so the whole field opens the date picker.
+            Box {
+                OutlinedTextField(
+                    value = stringResource(R.string.period_starts_on, formatDateWithWeekday(anchor)),
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.period_start_date)) },
+                    trailingIcon = { Icon(Icons.Outlined.DateRange, contentDescription = null) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Box(
+                    Modifier.matchParentSize().padding(top = 8.dp)
+                        .clickable(role = Role.Button, onClickLabel = stringResource(R.string.period_start_date)) { pickDate = true }
+                )
+            }
+        } else {
+            Text(stringResource(R.string.semi_monthly_hint), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.week_starts_on), style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
+        val days = listOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            days.forEachIndexed { i, d ->
+                SegmentedButton(
+                    selected = weekStart == d,
+                    onClick = { weekStart = d },
+                    shape = SegmentedButtonDefaults.itemShape(i, days.size, RoundedCornerShape(8.dp)),
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primary,
+                        activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                        activeBorderColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    icon = {},
+                    label = { Text(d.getDisplayName(TextStyle.FULL, Locale.getDefault()), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = { onSave(PayPeriodConfig(type, anchor), weekStart) }) { Text(stringResource(R.string.save)) }
         }
     }
 
@@ -206,8 +236,14 @@ private fun FrequencyOption(label: String, detail: String?, selected: Boolean, o
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(name = "Pay period dialog", showBackground = true, heightDp = 800)
+@OptIn(ExperimentalMaterial3Api::class)
+@androidx.compose.ui.tooling.preview.Preview(name = "Pay period sheet", showBackground = true, heightDp = 800)
 @Composable
 private fun PayPeriodDialogPreview() = com.oamsapps.punchd.ui.theme.PunchdTheme(dark = false) {
-    PayPeriodDialog(PayPeriodConfig(PayPeriodType.BIWEEKLY, LocalDate.of(2026, 11, 22)), DayOfWeek.SUNDAY, {}, { _, _ -> })
+    Surface(shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+        Column {
+            BottomSheetDefaults.DragHandle(Modifier.align(Alignment.CenterHorizontally))
+            PayPeriodSheetContent(PayPeriodConfig(PayPeriodType.BIWEEKLY, LocalDate.of(2026, 11, 22)), DayOfWeek.SUNDAY, {}, { _, _ -> })
+        }
+    }
 }
