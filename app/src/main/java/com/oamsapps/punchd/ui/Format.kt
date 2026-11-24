@@ -3,6 +3,7 @@ package com.oamsapps.punchd.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.oamsapps.punchd.R
+import com.oamsapps.punchd.util.formatMoneyNarrow
 import com.oamsapps.punchd.domain.engine.DurationParts
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -22,10 +23,8 @@ fun formatHm(d: Duration): String {
     return stringResource(R.string.hours_minutes, p.hours, p.minutes)
 }
 
-fun formatMoney(amount: BigDecimal, currency: String): String =
-    NumberFormat.getCurrencyInstance(Locale.getDefault()).apply {
-        runCatching { this.currency = Currency.getInstance(currency) }
-    }.format(amount)
+/** "$ 12.00", "₹ 19.64", "12,00 €" — see [formatMoneyNarrow]. Use with tabular figures so decimals line up. */
+fun formatMoney(amount: BigDecimal, currency: String): String = formatMoneyNarrow(amount, currency)
 
 private val timeFormatter: DateTimeFormatter get() = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 

@@ -123,7 +123,7 @@
     <string name="export_failed">Export failed. Please try again.</string>
     <string name="export_file_prefix">Timesheet</string>
     <string name="export_generated_on">Created %1$s</string>
-    <string name="export_hint">Shared with the Android share sheet: email, Drive, WhatsApp, print.</string>
+    <string name="export_hint">Opens the Android share sheet to send or save.</string>
     <string name="export_page">Page %1$d</string>
     <string name="export_pdf">PDF</string>
     <string name="export_pdf_title">Export as PDF</string>
@@ -240,4 +240,9 @@
     <string name="no_hours">No hours</string>
     <string name="open_day">Open day</string>
     <string name="over_schedule">%1$s over your scheduled hours</string>
+    <string name="total_hours">Total hours</string>
+    <string name="no_hours_period">No hours this period</string>
+    <string name="pay_period_a11y">Pay period: %1$s. Tap to change</string>
+    <string name="job_filter_a11y">Showing: %1$s. Tap to filter by job</string>
+    <string name="export_only_job">Only %1$s is exported.</string>
 </resources>

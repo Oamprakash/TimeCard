@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 /**
  * One brand palette: emerald for the main action, soft mint for selected states (chips, nav pill,
@@ -91,3 +92,8 @@ fun clockInColor(): Color = MaterialTheme.colorScheme.primary
 
 @Composable
 fun clockOutColor(): Color = MaterialTheme.colorScheme.error
+
+/** Light mint fill for selector chips ("Biweekly ⌄", "All jobs ⌄") so they read as tappable controls. */
+@Composable
+fun selectorContainerColor(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF1F3326) else Color(0xFFE8F3EC)

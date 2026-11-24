@@ -43,9 +43,10 @@ class TimesheetExporter @Inject constructor(
 ) {
     private val dir get() = File(context.cacheDir, "exports")
 
-    suspend fun export(period: PayPeriod, format: ExportFormat): Uri = withContext(Dispatchers.IO) {
+    /** [jobId] null = all jobs; otherwise only that job's shifts, marks and summary. */
+    suspend fun export(period: PayPeriod, format: ExportFormat, jobId: Long? = null): Uri = withContext(Dispatchers.IO) {
         val s = settings.settings.first()
-        val jobs = repo.activeJobs.first()
+        val jobs = repo.activeJobs.first().filter { jobId == null || it.job.id == jobId }
         val shifts = repo.observeShifts(HoursCalculator.loadFrom(period.start, s.weekStart), period.endInclusive).first()
         val marks = repo.observeMarks(period.start, period.endInclusive).first()
         val timesheet = TimesheetBuilder.build(

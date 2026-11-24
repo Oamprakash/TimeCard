@@ -52,7 +52,11 @@ sealed interface ExportEvent {
     data class Failed(val format: ExportFormat) : ExportEvent
 }
 
-data class JobReport(val job: JobLabel, val summary: JobPeriodSummary, val scheduled: Duration?)
+data class JobReport(val job: JobLabel, val summary: JobPeriodSummary, val scheduled: Duration?) {
+    /** Worked + paid leave: what the report is about. */
+    val hours: Duration get() = summary.worked.plus(summary.paidLeave)
+    val hasHours: Boolean get() = !hours.isZero
+}
 
 /** Pay totals can only be added up within one currency. */
 data class CurrencyTotal(val currency: String, val gross: BigDecimal)
@@ -64,9 +68,19 @@ data class ReportsUiState(
     val config: PayPeriodConfig? = null,
     val weekStart: DayOfWeek = DayOfWeek.MONDAY,
     val isCurrent: Boolean = true,
+    /** Shown jobs: ones with hours first (most hours on top), then zero-hour jobs. */
     val jobs: List<JobReport> = emptyList(),
     val totals: List<CurrencyTotal> = emptyList(),
-)
+    /** Combined worked + paid leave and overtime across the shown jobs. */
+    val totalHours: Duration = Duration.ZERO,
+    val totalOvertime: Duration = Duration.ZERO,
+    /** All active jobs, for the "All jobs ⌄" filter. */
+    val jobOptions: List<JobLabel> = emptyList(),
+    /** Null = all jobs. */
+    val selectedJobId: Long? = null,
+) {
+    val selectedJob: JobLabel? get() = jobOptions.firstOrNull { it.id == selectedJobId }
+}
 
 private data class PeriodKey(val period: PayPeriod, val config: PayPeriodConfig, val weekStart: DayOfWeek, val offset: Int)
 
@@ -105,7 +119,7 @@ class ReportsViewModel @Inject constructor(
         _exporting.value = format
         viewModelScope.launch {
             try {
-                val uri = exporter.export(period, format)
+                val uri = exporter.export(period, format, jobId = state.value.selectedJobId)
                 _events.send(ExportEvent.Share(exporter.shareIntent(uri, format)))
             } catch (e: CancellationException) {
                 throw e
@@ -130,6 +144,10 @@ class ReportsViewModel @Inject constructor(
     fun buyRemoveAds(activity: Activity): Boolean = billing.purchase(activity)
 
     private val offset = MutableStateFlow(0)
+    private val jobFilter = MutableStateFlow<Long?>(null)
+
+    /** Null = all jobs. Also decides what gets exported. */
+    fun selectJob(jobId: Long?) { jobFilter.value = jobId }
     private val ticker = flow { while (true) { emit(clock.instant()); delay(30_000) } }
 
     private fun today() = clock.instant().atZone(ZoneId.systemDefault()).toLocalDate()
@@ -150,7 +168,8 @@ class ReportsViewModel @Inject constructor(
             repo.observeMarks(k.period.start, k.period.endInclusive),
             repo.activeJobs,
             ticker,
-        ) { shifts, marks, jobs, now ->
+            jobFilter,
+        ) { shifts, marks, jobs, now, filter ->
             val ts = TimesheetBuilder.build(
                 jobs = jobs.map { it.toJobInfo() },
                 shifts = shifts.map { it.toDomain() },
@@ -161,10 +180,14 @@ class ReportsViewModel @Inject constructor(
                 now = now,
             )
             val days = java.time.temporal.ChronoUnit.DAYS.between(k.period.start, k.period.endInclusive) + 1
-            val reports = jobs.mapIndexed { i, j ->
+            val all = jobs.mapIndexed { i, j ->
                 val label = j.toLabel()
                 JobReport(label, ts.perJob[i], label.scheduledPerWeek?.let { Duration.ofSeconds(it.seconds * days / 7) })
             }
+            val selected = filter?.takeIf { id -> all.any { it.job.id == id } } // a removed job falls back to All
+            val reports = all
+                .filter { selected == null || it.job.id == selected }
+                .sortedWith(compareByDescending<JobReport> { it.hours }.thenBy { it.job.name.lowercase() })
             ReportsUiState(
                 loading = false,
                 period = k.period,
@@ -175,6 +198,10 @@ class ReportsViewModel @Inject constructor(
                 totals = reports.groupBy { it.job.currency }.map { (cur, list) ->
                     CurrencyTotal(cur, list.fold(BigDecimal.ZERO) { a, r -> a + r.summary.grossPay })
                 },
+                totalHours = reports.fold(Duration.ZERO) { a, r -> a.plus(r.hours) },
+                totalOvertime = reports.fold(Duration.ZERO) { a, r -> a.plus(r.summary.overtime).plus(r.summary.doubleTime) },
+                jobOptions = all.map { it.job },
+                selectedJobId = selected,
             )
         }
       }

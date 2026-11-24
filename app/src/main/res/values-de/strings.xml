@@ -123,7 +123,7 @@
     <string name="export_failed">Export fehlgeschlagen. Bitte versuche es erneut.</string>
     <string name="export_file_prefix">Stundenzettel</string>
     <string name="export_generated_on">Erstellt am %1$s</string>
-    <string name="export_hint">Teilen über Android: E-Mail, Drive, WhatsApp, Drucken.</string>
+    <string name="export_hint">Öffnet das Android-Teilen-Menü zum Senden oder Speichern.</string>
     <string name="export_page">Seite %1$d</string>
     <string name="export_pdf">PDF</string>
     <string name="export_pdf_title">Als PDF exportieren</string>
@@ -240,4 +240,9 @@
     <string name="no_hours">Keine Stunden</string>
     <string name="open_day">Tag öffnen</string>
     <string name="over_schedule">%1$s über deinen Sollstunden</string>
+    <string name="total_hours">Gesamtstunden</string>
+    <string name="no_hours_period">Keine Stunden in diesem Zeitraum</string>
+    <string name="pay_period_a11y">Abrechnungszeitraum: %1$s. Zum Ändern tippen</string>
+    <string name="job_filter_a11y">Angezeigt: %1$s. Zum Filtern nach Job tippen</string>
+    <string name="export_only_job">Nur %1$s wird exportiert.</string>
 </resources>
