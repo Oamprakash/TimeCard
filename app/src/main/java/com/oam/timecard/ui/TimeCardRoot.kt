@@ -27,8 +27,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.oam.timecard.R
+import com.oam.timecard.ui.clock.ClockScreen
 
-/** Navigation shell. Screens are placeholders until Sprint 2 (Clock) and Sprint 3 (Timesheet, Reports). */
+/** Navigation shell. Timesheet and Reports arrive in Sprint 3, Settings in Sprint 5. */
 private enum class Tab(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     Clock("clock", R.string.tab_clock, Icons.Filled.PlayArrow),
     Timesheet("timesheet", R.string.tab_timesheet, Icons.Filled.DateRange),
@@ -63,7 +64,8 @@ fun TimeCardRoot() {
             },
         ) { padding ->
             NavHost(nav, startDestination = Tab.Clock.route, modifier = Modifier.padding(padding)) {
-                Tab.entries.forEach { tab ->
+                composable(Tab.Clock.route) { ClockScreen() }
+                Tab.entries.filter { it != Tab.Clock }.forEach { tab ->
                     composable(tab.route) { Placeholder(stringResource(tab.label)) }
                 }
             }

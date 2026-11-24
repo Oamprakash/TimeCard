@@ -27,6 +27,8 @@ data class AppSettings(
     val weekStart: DayOfWeek,
     val payPeriod: PayPeriodConfig,
     val removeAds: Boolean,
+    /** Job preselected on the Clock tab when not clocked in. */
+    val selectedJobId: Long?,
 )
 
 @Singleton
@@ -38,6 +40,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val PAY_TYPE = stringPreferencesKey("pay_period_type")
         val PAY_ANCHOR = longPreferencesKey("pay_period_anchor_epoch_day")
         val REMOVE_ADS = booleanPreferencesKey("remove_ads") // cache only; Play Billing is the source of truth
+        val SELECTED_JOB = longPreferencesKey("selected_job_id")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -52,6 +55,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
                     ?: LocalDate.now().with(java.time.temporal.TemporalAdjusters.previousOrSame(weekStart)),
             ),
             removeAds = p[Keys.REMOVE_ADS] ?: false,
+            selectedJobId = p[Keys.SELECTED_JOB],
         )
     }
 
@@ -63,5 +67,6 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     }
 
     suspend fun setOnboardingDone() = context.dataStore.edit { it[Keys.ONBOARDING_DONE] = true }
+    suspend fun setSelectedJob(jobId: Long) = context.dataStore.edit { it[Keys.SELECTED_JOB] = jobId }
     suspend fun setRemoveAds(owned: Boolean) = context.dataStore.edit { it[Keys.REMOVE_ADS] = owned }
 }
