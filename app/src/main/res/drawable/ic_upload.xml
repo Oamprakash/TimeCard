@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material icon "file_upload" (Apache 2.0). Kept local: material-icons-extended isn't a dependency. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"
+    android:autoMirrored="false">
+    <path android:fillColor="@android:color/black" android:pathData="M9,16h6v-6h4l-7,-7 -7,7h4zM5,18h14v2H5z" />
+</vector>

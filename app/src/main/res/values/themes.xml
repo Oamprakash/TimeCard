@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window theme: matches the Compose palette so system UI, dialogs and the native ad CTA use the brand colour. -->
+    <style name="Theme.Punchd" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/brand_emerald</item>
+        <item name="android:colorAccent">@color/brand_emerald</item>
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

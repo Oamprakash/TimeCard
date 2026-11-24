@@ -28,15 +28,15 @@ fun admobId(key: String, release: Boolean): String {
 }
 
 android {
-    namespace = "com.oam.timecard"
+    namespace = "com.oamsapps.punchd"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.oam.timecard" // change once the app name is decided
+        applicationId = "com.oamsapps.punchd" // Play package name: can never change after the first upload
         minSdk = 26                         // java.time without desugaring
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -106,6 +106,10 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.ump)
     implementation(libs.billing)
+
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

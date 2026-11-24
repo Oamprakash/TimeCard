@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep in sync with ui/theme/Theme.kt (Brand). -->
+    <color name="brand_emerald">#1B873F</color>
+    <color name="window_background">#F7FAF6</color>
+</resources>
