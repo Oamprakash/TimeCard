@@ -262,4 +262,5 @@
     <string name="color_teal">Petrol</string>
     <string name="color_brown">Braun</string>
     <string name="color_blue_grey">Blaugrau</string>
+    <string name="note_placeholder">Notiz schreiben…</string>
 </resources>

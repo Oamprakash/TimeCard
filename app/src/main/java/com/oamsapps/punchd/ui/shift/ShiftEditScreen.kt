@@ -60,6 +60,17 @@ import androidx.compose.material3.Surface
 import com.oamsapps.punchd.ui.JobLabel
 import com.oamsapps.punchd.ui.formatDateWithWeekday
 import java.time.Duration
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import com.oamsapps.punchd.R
 import com.oamsapps.punchd.domain.engine.ShiftError
 import com.oamsapps.punchd.ui.JobDot
@@ -135,15 +146,17 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (s.jobs.size > 1) JobDropdown(s.jobs, s.jobId, viewModel::setJob)
+            JobDropdown(s.jobs, s.jobId, viewModel::setJob)
 
-            FieldButton(stringResource(R.string.date), formatDateWithWeekday(s.date), enabled = !s.isRunning) { datePicker = true }
+            val calendar = rememberVectorPainter(Icons.Outlined.DateRange)
+            val clock = painterResource(R.drawable.ic_schedule)
+            PickerField(stringResource(R.string.date), formatDateWithWeekday(s.date), calendar, enabled = !s.isRunning) { datePicker = true }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FieldButton(stringResource(R.string.start), formatTime(s.start), Modifier.weight(1f)) { timeTarget = "start" }
+                PickerField(stringResource(R.string.start), formatTime(s.start), clock, Modifier.weight(1f)) { timeTarget = "start" }
                 if (s.isRunning) {
-                    FieldButton(stringResource(R.string.end), stringResource(R.string.now), Modifier.weight(1f), enabled = false) {}
+                    PickerField(stringResource(R.string.end), stringResource(R.string.now), clock, Modifier.weight(1f), enabled = false) {}
                 } else {
-                    FieldButton(stringResource(R.string.end), formatTime(s.end), Modifier.weight(1f)) { timeTarget = "end" }
+                    PickerField(stringResource(R.string.end), formatTime(s.end), clock, Modifier.weight(1f)) { timeTarget = "end" }
                 }
             }
             viewModel.preview(s)?.let { p ->
@@ -157,12 +170,11 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
             }
 
             // Breaks
-            Text(stringResource(R.string.breaks), style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.breaks), style = MaterialTheme.typography.titleMedium)
             s.breaks.forEachIndexed { i, b ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FieldButton(stringResource(R.string.start), formatTime(b.start), Modifier.weight(1f), enabled = !s.isRunning) { timeTarget = "b${i}s" }
-                    FieldButton(stringResource(R.string.end), formatTime(b.end), Modifier.weight(1f), enabled = !s.isRunning) { timeTarget = "b${i}e" }
+                    PickerField(stringResource(R.string.start), formatTime(b.start), clock, Modifier.weight(1f), enabled = !s.isRunning) { timeTarget = "b${i}s" }
+                    PickerField(stringResource(R.string.end), formatTime(b.end), clock, Modifier.weight(1f), enabled = !s.isRunning) { timeTarget = "b${i}e" }
                     if (!s.isRunning) IconButton(onClick = { viewModel.removeBreak(i) }) {
                         Icon(Icons.Filled.Close, stringResource(R.string.remove_break))
                     }
@@ -183,6 +195,10 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
                 value = s.note,
                 onValueChange = viewModel::setNote,
                 label = { Text(stringResource(R.string.note_optional)) },
+                placeholder = { Text(stringResource(R.string.note_placeholder)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_notes), contentDescription = null) },
+                minLines = 3,
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -245,23 +261,36 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
     }
 }
 
-/** Job picker for shifts: "● Primary job ▾" (scales to any number of jobs, unlike a chip row). */
+/**
+ * Job picker for shifts: "Job  ● Primary job  ▾" on a soft fill. A menu only when there's more
+ * than one job; with one job it simply shows which job the shift belongs to.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun JobDropdown(jobs: List<JobLabel>, selectedId: Long?, onSelect: (Long) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val selected = jobs.firstOrNull { it.id == selectedId }
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
-        OutlinedTextField(
-            value = selected?.name.orEmpty(),
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(stringResource(R.string.job)) },
-            leadingIcon = selected?.let { j -> { JobDot(j.color, 12.dp) } },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
-            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-        )
+    val choosable = jobs.size > 1
+    val cs = MaterialTheme.colorScheme
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { if (choosable) open = it }) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = cs.surfaceVariant.copy(alpha = 0.45f),
+            border = BorderStroke(1.dp, cs.outline),
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = choosable).fillMaxWidth(),
+        ) {
+            Row(Modifier.heightIn(min = 56.dp).padding(start = 16.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.job), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                Spacer(Modifier.width(16.dp))
+                selected?.let {
+                    JobDot(it.color)
+                    Spacer(Modifier.width(8.dp))
+                    Text(it.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, modifier = Modifier.weight(1f))
+                } ?: Spacer(Modifier.weight(1f))
+                if (choosable) ExposedDropdownMenuDefaults.TrailingIcon(expanded = open)
+            }
+        }
         ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             jobs.forEach { j ->
                 DropdownMenuItem(
@@ -275,37 +304,53 @@ private fun JobDropdown(jobs: List<JobLabel>, selectedId: Long?, onSelect: (Long
     }
 }
 
+/** Read-only outlined field ("Date", "Start", "End") with a trailing icon; the whole field opens its picker. */
+@Composable
+private fun PickerField(
+    label: String,
+    value: String,
+    icon: Painter,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Box(modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            singleLine = true,
+            label = { Text(label) },
+            trailingIcon = { Icon(icon, contentDescription = null) },
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (enabled) {
+            Box(Modifier.matchParentSize().padding(top = 8.dp).clip(RoundedCornerShape(12.dp))
+                .clickable(role = Role.Button, onClickLabel = label, onClick = onClick))
+        }
+    }
+}
+
 /** "7:30 worked · 30 min break", tinted, right under the times so the result is visible while editing. */
 @Composable
 private fun WorkedSummary(p: WorkedPreview) {
     Surface(color = com.oamsapps.punchd.ui.theme.highlightContainerColor(), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(painterResource(R.drawable.ic_timer), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
             Text(
                 stringResource(R.string.day_worked, formatHm(p.worked)),
                 style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
                 fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             if (p.breaks > Duration.ZERO) {
                 Text(stringResource(R.string.break_short, formatHm(p.breaks)), style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-@Composable
-private fun FieldButton(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth()) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
-            Text(value, style = MaterialTheme.typography.titleMedium)
         }
     }
 }
