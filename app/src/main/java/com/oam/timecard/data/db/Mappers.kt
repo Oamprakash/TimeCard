@@ -62,3 +62,10 @@ fun ShiftWithBreaks.toDomain(): WorkShift = WorkShift(
 )
 
 fun DayMarkEntity.toDomain() = DayMarkEntry(date, jobId, type, Duration.ofMinutes(paidMinutes.toLong()))
+
+fun JobWithRules.toJobInfo() = com.oam.timecard.domain.engine.JobInfo(
+    id = job.id,
+    rules = rules.toDomain(),
+    hourlyRate = job.hourlyRate,
+    scheduledPerWeek = job.scheduledMinPerWeek?.let { Duration.ofMinutes(it.toLong()) },
+)

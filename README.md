@@ -24,14 +24,17 @@ data/repository TimeCardRepository – clock in/out, breaks, job limit, period s
 data/settings   DataStore: week start, pay period, onboarding, remove-ads cache
 clock           ClockController (single entry point for punches), ClockNotifier, receivers
 ui/clock        Clock tab: job chips, big Clock in/out button, break button, live timer, totals
-ui              Bottom-nav shell (Timesheet/Reports in Sprint 3, Settings in Sprint 5)
+ui/timesheet    Week/month timesheet, day sheet (shifts, sick/holiday/leave per job)
+ui/shift        Add/edit shift: job, date, start/end (night shifts), breaks, note, delete
+ui/reports      Pay-period report per job, totals per currency, pay-period + week-start picker
+ui              Bottom-nav shell (Settings arrives in Sprint 5), shared formatting
 ```
 
 ## Sprint status
 
 - [x] Sprint 1: core engine (Room schema, presets, calculator, tests)
 - [x] Sprint 2: clock flow (Clock tab, clock in/out, breaks, auto-deduct, ongoing notification, reboot recovery)
-- [ ] Sprint 3: timesheet and reports
+- [x] Sprint 3: timesheet and reports (week/month timesheet, add/edit shifts, day marks, pay-period report per job)
 - [ ] Sprint 4: export and monetization
 - [ ] Sprint 5: polish and ship
 
@@ -51,6 +54,19 @@ ui              Bottom-nav shell (Timesheet/Reports in Sprint 3, Settings in Spr
 4. Reboot the phone. The notification should come back without opening the app, though it can take a minute on Samsung.
 5. Clock out from the notification. The notification disappears, and the Clock tab shows today's and this week's totals.
 6. With the Germany preset, work past 6 h without a break. The "Break rule not met" warning should appear.
+7. Timesheet: add a 22:00–06:00 shift with a 02:00–02:30 break. It should show 7h 30m on the start day.
+8. Mark a day as sick and check the Reports tab: paid leave is added to gross pay, but not to overtime.
+
+## Timesheet and reports (Sprint 3)
+
+- **Manual entry rules** (`ShiftDrafts`): times are typed as they read on the clock.
+  - An end time at or before the start means the next day, so 22:00–06:00 is a night shift. A break time earlier than the start is also on the next day.
+  - A shift is rejected if it's in the future, if a break is outside the shift or overlaps another break, if the breaks are as long as the shift, or if it overlaps another shift.
+- **Editing the running shift:** only the start, job and note can be changed. Its end and breaks stay under the Clock tab. Saving or deleting re-syncs the notification.
+- **Day marks:** sick, holiday or paid leave, per job and per day. Paid hours default to the weekly schedule ÷ 5, or 8 h if no schedule is set.
+- **Scheduled hours** are an optional per-job weekly figure. Ranges that aren't a full week (months, pay periods) are pro-rated by the number of days.
+- **Reports** show one card per job, with each job's own overtime rules. Totals are added up per currency.
+- **Schema note:** `jobs.scheduledMinPerWeek` was added while the database is still at version 1, before release. Uninstall any earlier debug build before installing this one.
 
 ## Engine rules (as implemented)
 

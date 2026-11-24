@@ -57,11 +57,11 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oam.timecard.R
+import com.oam.timecard.ui.formatHm
+import com.oam.timecard.ui.formatMoney
 import com.oam.timecard.domain.engine.DurationParts
 import com.oam.timecard.domain.model.DayFlag
 import com.oam.timecard.domain.model.PresetKind
-import java.math.BigDecimal
-import java.text.NumberFormat
 import java.time.Duration
 import java.util.Currency
 import java.util.Locale
@@ -104,8 +104,8 @@ fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
             state.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
             state.jobs.isEmpty() -> JobForm(
                 title = stringResource(R.string.first_job_title),
-                onSave = { name, rate, currency, preset ->
-                    viewModel.addJob(name, rate, currency, preset, JOB_COLORS.first())
+                onSave = { name, rate, currency, preset, scheduled ->
+                    viewModel.addJob(name, rate, currency, preset, JOB_COLORS.first(), scheduled)
                 },
                 onCancel = null,
             )
@@ -129,8 +129,8 @@ fun ClockScreen(viewModel: ClockViewModel = hiltViewModel()) {
             text = {
                 JobForm(
                     title = stringResource(R.string.add_job),
-                    onSave = { name, rate, currency, preset ->
-                        viewModel.addJob(name, rate, currency, preset, JOB_COLORS[state.jobs.size % JOB_COLORS.size])
+                    onSave = { name, rate, currency, preset, scheduled ->
+                        viewModel.addJob(name, rate, currency, preset, JOB_COLORS[state.jobs.size % JOB_COLORS.size], scheduled)
                         showAddJob = false
                     },
                     onCancel = { showAddJob = false },
@@ -265,13 +265,14 @@ private fun TotalsCard(state: ClockUiState) {
 @Composable
 private fun JobForm(
     title: String,
-    onSave: (name: String, rate: String, currency: String, preset: PresetKind) -> Unit,
+    onSave: (name: String, rate: String, currency: String, preset: PresetKind, scheduledHours: String) -> Unit,
     onCancel: (() -> Unit)?,
 ) {
     val locale = Locale.getDefault()
     val defaultCurrency = remember { runCatching { Currency.getInstance(locale).currencyCode }.getOrDefault("USD") }
     var name by rememberSaveable { mutableStateOf("") }
     var rate by rememberSaveable { mutableStateOf("") }
+    var scheduled by rememberSaveable { mutableStateOf("") }
     var preset by rememberSaveable {
         mutableStateOf(
             when (locale.country) {
@@ -292,6 +293,13 @@ private fun JobForm(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )
+        OutlinedTextField(
+            scheduled, { scheduled = it },
+            label = { Text(stringResource(R.string.scheduled_hours_optional)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+        )
         Text(stringResource(R.string.rules), style = MaterialTheme.typography.titleSmall)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             listOf(
@@ -306,18 +314,7 @@ private fun JobForm(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (onCancel != null) TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.size(8.dp))
-            Button(onClick = { onSave(name, rate, defaultCurrency, preset) }) { Text(stringResource(R.string.save)) }
+            Button(onClick = { onSave(name, rate, defaultCurrency, preset, scheduled) }) { Text(stringResource(R.string.save)) }
         }
     }
 }
-
-@Composable
-private fun formatHm(d: Duration): String {
-    val p = DurationParts.of(d)
-    return stringResource(R.string.hours_minutes, p.hours, p.minutes)
-}
-
-private fun formatMoney(amount: BigDecimal, currency: String): String =
-    NumberFormat.getCurrencyInstance(Locale.getDefault()).apply {
-        runCatching { this.currency = Currency.getInstance(currency) }
-    }.format(amount)

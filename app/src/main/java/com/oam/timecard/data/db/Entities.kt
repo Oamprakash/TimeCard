@@ -53,6 +53,8 @@ data class JobEntity(
     val ruleSetId: Long,
     val archived: Boolean = false,
     val sortOrder: Int = 0,
+    /** Planned minutes per week, for "worked vs scheduled". Null = not set. */
+    val scheduledMinPerWeek: Int? = null,
 )
 
 @Entity(

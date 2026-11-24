@@ -184,16 +184,22 @@ class ClockViewModel @Inject constructor(
         viewModelScope.launch { controller.sync() }
     }
 
-    fun addJob(name: String, rateText: String, currency: String, preset: PresetKind, color: Int) {
+    fun addJob(name: String, rateText: String, currency: String, preset: PresetKind, color: Int, scheduledText: String = "") {
         val rate = rateText.trim().replace(',', '.').toBigDecimalOrNull()
-        if (name.isBlank() || rate == null || rate.signum() < 0) {
+        val scheduledHours = scheduledText.trim().replace(',', '.').takeIf { it.isNotEmpty() }?.toBigDecimalOrNull()
+        val scheduledInvalid = scheduledText.isNotBlank() &&
+            (scheduledHours == null || scheduledHours.signum() < 0 || scheduledHours > BigDecimal(168))
+        if (name.isBlank() || rate == null || rate.signum() < 0 || scheduledInvalid) {
             _messages.tryEmit(ClockMessage.INVALID_JOB)
             return
         }
         viewModelScope.launch {
             val s = settings.first()
             try {
-                val id = repo.addJob(name.trim(), color, rate, currency, preset, unlimitedJobs = s.removeAds)
+                val id = repo.addJob(
+                    name.trim(), color, rate, currency, preset, unlimitedJobs = s.removeAds,
+                    scheduledMinPerWeek = scheduledHours?.multiply(BigDecimal(60))?.toInt(),
+                )
                 settingsRepo.setSelectedJob(id)
             } catch (_: JobLimitReachedException) {
                 _messages.tryEmit(ClockMessage.JOB_LIMIT)
