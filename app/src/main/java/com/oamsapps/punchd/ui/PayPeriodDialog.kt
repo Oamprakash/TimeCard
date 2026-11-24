@@ -58,7 +58,6 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -71,13 +70,6 @@ fun periodTypeLabel(type: PayPeriodType) = stringResource(
         PayPeriodType.MONTHLY -> R.string.period_monthly
     }
 )
-
-/** "Sun, 22 Nov 2026" / "So., 22. Nov. 2026", in the locale's own order. */
-private fun formatDateWithWeekday(date: LocalDate): String {
-    val locale = Locale.getDefault()
-    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEdMMMyyyy")
-    return DateTimeFormatter.ofPattern(pattern, locale).format(date)
-}
 
 /**
  * Pay period frequency, its start date and the week start, as a modal bottom sheet:

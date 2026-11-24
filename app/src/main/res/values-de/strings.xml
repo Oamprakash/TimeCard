@@ -53,7 +53,7 @@
     <string name="breaks">Pausen</string>
     <string name="current_period">Aktueller Zeitraum</string>
     <string name="date">Datum</string>
-    <string name="day_off_title">Krank, Feiertag oder Urlaub</string>
+    <string name="day_off_title">Abwesenheit / Urlaub</string>
     <string name="delete">Löschen</string>
     <string name="delete_running_warning">Du bist in dieser Schicht eingestempelt. Beim Löschen stoppt auch die Zeitmessung.</string>
     <string name="delete_shift_q">Diese Schicht löschen?</string>
@@ -77,7 +77,7 @@
     <string name="month">Monat</string>
     <string name="next">Weiter</string>
     <string name="no_jobs_yet">Füge auf dem Tab Stempeln einen Job hinzu, um Berichte zu sehen.</string>
-    <string name="no_shifts">Keine Schichten an diesem Tag.</string>
+    <string name="no_shifts">Keine Schichten erfasst</string>
     <string name="note_optional">Notiz (optional)</string>
     <string name="now">jetzt</string>
     <string name="ok">OK</string>
@@ -247,4 +247,5 @@
     <string name="select_frequency">Häufigkeit wählen</string>
     <string name="period_start_date">Startdatum des Zeitraums</string>
     <string name="period_semi_monthly_detail">(1.–15., 16.–Monatsende)</string>
+    <string name="day_worked">%1$s gearbeitet</string>
 </resources>

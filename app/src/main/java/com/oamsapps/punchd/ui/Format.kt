@@ -40,6 +40,13 @@ fun formatDayShort(date: LocalDate): String =
 fun formatDateMedium(date: LocalDate): String =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(date)
 
+/** "Wed, 25 Nov 2026" / "Mi., 25. Nov. 2026", in the locale's own order. */
+fun formatDateWithWeekday(date: LocalDate): String {
+    val locale = java.util.Locale.getDefault()
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEdMMMyyyy")
+    return DateTimeFormatter.ofPattern(pattern, locale).format(date)
+}
+
 fun formatMonth(date: LocalDate): String =
     DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()).format(date)
 
