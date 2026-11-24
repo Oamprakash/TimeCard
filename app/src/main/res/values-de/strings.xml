@@ -246,10 +246,7 @@
     <string name="period_start_date">Startdatum des Zeitraums</string>
     <string name="period_semi_monthly_detail">(1.–15., 16.–Monatsende)</string>
     <string name="day_worked">%1$s gearbeitet</string>
-    <string name="pro_no_ads">Keine Werbung</string>
-    <string name="pro_unlimited_jobs">Unbegrenzt viele Jobs</string>
-    <string name="pro_free_exports">PDF- und Excel-Export ohne Werbung</string>
-    <string name="pro_one_time">Einmaliger Kauf. Kein Abo.</string>
-    <string name="remind_after">Erinnern nach</string>
     <string name="hours_short">%1$d Std.</string>
+    <string name="period_starts_on_long">Ein Zeitraum beginnt am %1$s</string>
+    <string name="pro_benefits">Einmaliger Kauf: werbefrei, unbegrenzt viele Jobs und kostenloser PDF- &amp; Excel-Export.</string>
 </resources>

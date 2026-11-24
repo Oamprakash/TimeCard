@@ -246,10 +246,7 @@
     <string name="period_start_date">Period start date</string>
     <string name="period_semi_monthly_detail">(1–15, 16–end)</string>
     <string name="day_worked">%1$s worked</string>
-    <string name="pro_no_ads">No ads</string>
-    <string name="pro_unlimited_jobs">Unlimited jobs</string>
-    <string name="pro_free_exports">PDF and Excel export without ads</string>
-    <string name="pro_one_time">One-time purchase. No subscription.</string>
-    <string name="remind_after">Remind me after</string>
-    <string name="hours_short">%1$d h</string>
+    <string name="hours_short">%1$dh</string>
+    <string name="period_starts_on_long">A period starts on %1$s</string>
+    <string name="pro_benefits">One-time purchase: ad-free experience, unlimited jobs, and free PDF &amp; Excel export.</string>
 </resources>
