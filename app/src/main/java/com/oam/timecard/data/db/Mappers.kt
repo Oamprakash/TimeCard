@@ -59,6 +59,7 @@ fun ShiftWithBreaks.toDomain(): WorkShift = WorkShift(
     end = shift.endUtc,
     zone = shift.zoneId,
     breaks = breaks.map { BreakSpan(it.startUtc, it.endUtc) },
+    note = shift.note,
 )
 
 fun DayMarkEntity.toDomain() = DayMarkEntry(date, jobId, type, Duration.ofMinutes(paidMinutes.toLong()))

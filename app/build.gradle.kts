@@ -7,6 +7,26 @@ plugins {
     alias(libs.plugins.room)
 }
 
+/**
+ * AdMob IDs. Debug always uses Google's public test IDs. Release reads your real IDs from
+ * ~/.gradle/gradle.properties (never commit them), e.g. ADMOB_BANNER_ID=ca-app-pub-xxx/yyy,
+ * and falls back to test IDs with a build warning if one is missing.
+ */
+val admobTestIds = mapOf(
+    "ADMOB_APP_ID" to "ca-app-pub-3940256099942544~3347511713",
+    "ADMOB_BANNER_ID" to "ca-app-pub-3940256099942544/9214589741",
+    "ADMOB_NATIVE_ID" to "ca-app-pub-3940256099942544/2247696110",
+    "ADMOB_REWARDED_ID" to "ca-app-pub-3940256099942544/5224354917",
+    "ADMOB_INTERSTITIAL_ID" to "ca-app-pub-3940256099942544/1033173712",
+)
+
+fun admobId(key: String, release: Boolean): String {
+    if (!release) return admobTestIds.getValue(key)
+    return providers.gradleProperty(key).orNull ?: admobTestIds.getValue(key).also {
+        logger.warn("w: $key not set in gradle.properties; release build uses the AdMob TEST id")
+    }
+}
+
 android {
     namespace = "com.oam.timecard"
     compileSdk = 36
@@ -21,7 +41,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            admobTestIds.keys.filter { it != "ADMOB_APP_ID" }.forEach { buildConfigField("String", it, "\"${admobId(it, false)}\"") }
+            manifestPlaceholders["admobAppId"] = admobId("ADMOB_APP_ID", false)
+        }
         release {
+            admobTestIds.keys.filter { it != "ADMOB_APP_ID" }.forEach { buildConfigField("String", it, "\"${admobId(it, true)}\"") }
+            manifestPlaceholders["admobAppId"] = admobId("ADMOB_APP_ID", true)
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -33,7 +59,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     // Lets androidTest open the exported schema JSON for migration tests.
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
@@ -73,6 +102,10 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
+
+    implementation(libs.play.services.ads)
+    implementation(libs.ump)
+    implementation(libs.billing)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

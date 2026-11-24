@@ -51,6 +51,7 @@ import com.oam.timecard.domain.engine.ShiftError
 import com.oam.timecard.ui.JobDot
 import com.oam.timecard.ui.formatDateMedium
 import com.oam.timecard.ui.formatHm
+import com.oam.timecard.ui.findActivity
 import com.oam.timecard.ui.formatTime
 import java.time.Instant
 import java.time.LocalTime
@@ -65,7 +66,13 @@ fun ShiftEditScreen(onClose: () -> Unit, viewModel: ShiftEditViewModel = hiltVie
     // Which time is being picked: "start", "end", "b<i>s", "b<i>e".
     var timeTarget by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.done.collect { onClose() } }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.done.collect { saved ->
+            if (saved) context.findActivity()?.let { viewModel.showInterstitialAfterSave(it) }
+            onClose()
+        }
+    }
 
     Scaffold(
         topBar = {

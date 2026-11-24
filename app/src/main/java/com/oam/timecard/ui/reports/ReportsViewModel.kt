@@ -1,8 +1,16 @@
 package com.oam.timecard.ui.reports
 
+import android.app.Activity
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.oam.timecard.ads.AdsGate
+import com.oam.timecard.ads.RewardResult
+import com.oam.timecard.ads.RewardedManager
+import com.oam.timecard.billing.BillingManager
 import com.oam.timecard.data.db.toDomain
+import com.oam.timecard.export.ExportFormat
+import com.oam.timecard.export.TimesheetExporter
 import com.oam.timecard.data.db.toJobInfo
 import com.oam.timecard.data.repository.TimeCardRepository
 import com.oam.timecard.data.settings.SettingsRepository
@@ -21,7 +29,11 @@ import java.time.DayOfWeek
 import java.time.Duration
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,6 +44,11 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+sealed interface ExportEvent {
+    data class Share(val intent: Intent) : ExportEvent
+    data object Failed : ExportEvent
+}
 
 data class JobReport(val job: JobLabel, val summary: JobPeriodSummary, val scheduled: Duration?)
 
@@ -56,7 +73,58 @@ class ReportsViewModel @Inject constructor(
     private val repo: TimeCardRepository,
     private val settingsRepo: SettingsRepository,
     private val clock: Clock,
+    private val exporter: TimesheetExporter,
+    private val gate: AdsGate,
+    private val rewarded: RewardedManager,
+    private val billing: BillingManager,
 ) : ViewModel() {
+
+    private val _exporting = MutableStateFlow<ExportFormat?>(null)
+    /** Format being written right now (buttons show progress, extra taps are ignored). */
+    val exporting: StateFlow<ExportFormat?> = _exporting.asStateFlow()
+
+    private val _events = Channel<ExportEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+
+    init {
+        rewarded.preload()
+        billing.refresh()
+    }
+
+    /** PDF and Excel cost one rewarded ad unless ads are off (Remove ads bought, or no consent). CSV is always free. */
+    fun needsRewardedAd(format: ExportFormat): Boolean = format != ExportFormat.CSV && gate.showAds.value
+
+    val removeAdsPrice: StateFlow<String?> = billing.price
+
+    fun export(format: ExportFormat) {
+        val period = state.value.period ?: return
+        if (_exporting.value != null) return
+        _exporting.value = format
+        viewModelScope.launch {
+            try {
+                val uri = exporter.export(period, format)
+                _events.send(ExportEvent.Share(exporter.shareIntent(uri, format)))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _events.send(ExportEvent.Failed)
+            } finally {
+                _exporting.value = null
+            }
+        }
+    }
+
+    /** The user chose to watch the ad. No fill / offline still exports: their data shouldn't need the network. */
+    fun watchAdThenExport(activity: Activity, format: ExportFormat) {
+        viewModelScope.launch {
+            when (rewarded.show(activity)) {
+                RewardResult.EARNED, RewardResult.UNAVAILABLE -> export(format)
+                RewardResult.NOT_EARNED -> Unit
+            }
+        }
+    }
+
+    fun buyRemoveAds(activity: Activity): Boolean = billing.purchase(activity)
 
     private val offset = MutableStateFlow(0)
     private val ticker = flow { while (true) { emit(clock.instant()); delay(30_000) } }

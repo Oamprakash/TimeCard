@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -43,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oam.timecard.R
+import com.oam.timecard.ads.NativeAdRow
 import com.oam.timecard.domain.engine.Timesheet
 import com.oam.timecard.domain.engine.TimesheetDay
 import com.oam.timecard.domain.model.DayFlag
@@ -103,9 +103,16 @@ fun TimesheetScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     item { TotalsCard(ts) }
-                    // Sprint 4: one native ad row per 10 days of entries goes into this list.
-                    items(ts.days, key = { it.date.toEpochDay() }) { day ->
-                        DayRow(day, isToday = day.date == state.today, state = state, onClick = { openDay = day.date })
+                    // Spec: one native ad row per 10 days of entries.
+                    var daysWithEntries = 0
+                    ts.days.forEach { day ->
+                        item(key = day.date.toEpochDay()) {
+                            DayRow(day, isToday = day.date == state.today, state = state, onClick = { openDay = day.date })
+                        }
+                        if (day.shifts.isNotEmpty() || day.marks.isNotEmpty()) {
+                            daysWithEntries++
+                            if (daysWithEntries % 10 == 0) item(key = "ad-$daysWithEntries") { NativeAdRow() }
+                        }
                     }
                 }
             }
