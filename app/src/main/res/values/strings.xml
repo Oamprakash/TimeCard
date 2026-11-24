@@ -85,11 +85,10 @@
     <string name="paid_hours">Paid hours</string>
     <string name="paid_leave">Paid leave</string>
     <string name="pay_period">Pay period</string>
-    <string name="pay_period_settings">Pay period</string>
     <string name="period_biweekly">Every two weeks</string>
     <string name="period_monthly">Monthly</string>
-    <string name="period_semi_monthly">Twice a month (1–15, 16–end)</string>
-    <string name="period_starts_on">A period starts on %1$s</string>
+    <string name="period_semi_monthly">Twice a month</string>
+    <string name="period_starts_on">Starts on %1$s</string>
     <string name="period_weekly">Weekly</string>
     <string name="previous">Previous</string>
     <string name="regular">Regular</string>
@@ -245,4 +244,7 @@
     <string name="pay_period_a11y">Pay period: %1$s. Tap to change</string>
     <string name="job_filter_a11y">Showing: %1$s. Tap to filter by job</string>
     <string name="export_only_job">Only %1$s is exported.</string>
+    <string name="select_frequency">Select frequency</string>
+    <string name="period_start_date">Period start date</string>
+    <string name="period_semi_monthly_detail">(1–15, 16–end)</string>
 </resources>
